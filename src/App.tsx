@@ -1,11 +1,17 @@
-import { Button } from "@/components/ui/button"
+import { Suspense } from 'react';
+import { RouterProvider } from 'react-router-dom';
+import { router } from './routes';
 
 function App() {
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center">
-      <Button>Click me</Button>
-    </div>
-  )
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
+    }>
+      <RouterProvider router={router} />
+    </Suspense>
+  );
 }
 
-export default App
+export default App;
