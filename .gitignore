@@ -25,3 +25,8 @@ dist-ssr
 
 .clinerules
 .devcontainer
+
+# amplify
+.amplify
+amplify_outputs*
+amplifyconfiguration*
