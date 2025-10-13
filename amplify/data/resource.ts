@@ -18,7 +18,7 @@ const schema = a.schema({
       //shopAssociations: a.hasMany('ClubAssociation', 'clubId'),
     })
     .authorization((allow) => [
-      allow.guest().to(['read', 'list']),
+      allow.guest().to(['read']),
       allow.authenticated(),
     ]),
 
@@ -38,7 +38,7 @@ const schema = a.schema({
       roles: a.hasMany('ChapterRole', 'chapterId'),
     })
     .authorization((allow) => [
-      allow.guest().to(['read', 'list']),
+      allow.guest().to(['read']),
       allow.authenticated(),
     ]),
 
@@ -52,7 +52,7 @@ const schema = a.schema({
       phone: a.phone().authorization((allow)=> [allow.authenticated().to(['read'])]),
     })
     .authorization((allow) => [
-      allow.guest().to(['read', 'list']),
+      allow.guest().to(['read']),
       allow.authenticated(),
     ]),
 });
