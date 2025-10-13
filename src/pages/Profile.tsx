@@ -3,15 +3,15 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import { fetchAuthSession } from 'aws-amplify/auth';
-import type { Schema } from '@/amplify/data/resource';
+import type { Schema } from '@/../amplify/data/resource';
 import ContentOnly from '@/components/layouts/ContentOnly';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
 const client = generateClient<Schema>();
 
-type Club = Schema['Club']['type'];
-type ClubChapter = Schema['ClubChapter']['type'];
+// type Club = Schema['Club']['type'];
+// type ClubChapter = Schema['ClubChapter']['type'];
 
 interface CombinedClubItem {
   id: string;

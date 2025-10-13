@@ -304,7 +304,7 @@ export default function Clubs() {
         
         // Fetch chapters with filter and pagination
         const response = await client.models.ClubChapter.list({
-          selectionSet: ['id', 'name', 'description', 'address', 'city', 'state', 'zipCode', 'latitude', 'longitude', 'clubId', 'club.*', 'roles.*'],
+          selectionSet: ['id', 'name', 'description', 'website', 'address', 'city', 'state', 'zipCode', 'latitude', 'longitude', 'clubId', 'club.*', 'roles.*'],
           authMode,
           filter: chapterFilter,
           limit: 1000,
@@ -384,7 +384,7 @@ export default function Clubs() {
       
       // Fetch next page
       const response = await client.models.ClubChapter.list({
-        selectionSet: ['id', 'name', 'description', 'address', 'city', 'state', 'zipCode', 'latitude', 'longitude', 'clubId', 'club.*', 'roles.*'],
+        selectionSet: ['id', 'name', 'description', 'website', 'address', 'city', 'state', 'zipCode', 'latitude', 'longitude', 'clubId', 'club.*', 'roles.*'],
         authMode,
         filter: chapterFilter,
         limit: 1000,

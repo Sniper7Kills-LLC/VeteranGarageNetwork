@@ -27,6 +27,7 @@ export default function CreateClubModal({
 }: CreateClubModalProps) {
   const [clubName, setClubName] = useState('');
   const [clubDescription, setClubDescription] = useState('');
+  const [clubWebsite, setClubWebsite] = useState('');
   const [selectedClubType, setSelectedClubType] = useState<string>('');
   const [adminNotes, setAdminNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,6 +35,7 @@ export default function CreateClubModal({
   const resetForm = () => {
     setClubName('');
     setClubDescription('');
+    setClubWebsite('');
     setSelectedClubType('');
     setAdminNotes('');
   };
@@ -67,6 +69,7 @@ export default function CreateClubModal({
       const clubData: {
         name: string;
         description?: string;
+        website?: string;
         notes: string;
         type?: ClubType;
       } = {
@@ -74,6 +77,11 @@ export default function CreateClubModal({
         description: clubDescription.trim() || undefined,
         notes: adminNotes.trim(),
       };
+
+      // Add optional fields
+      if (clubWebsite.trim()) {
+        clubData.website = clubWebsite.trim();
+      }
 
       // Add club type if one is selected
       if (selectedClubType) {
@@ -186,6 +194,17 @@ export default function CreateClubModal({
               onChange={(e) => setClubDescription(e.target.value)}
               placeholder="Enter club description"
               className="w-full mt-1 p-2 border border-border rounded-md bg-background min-h-[100px]"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="club-website">Website URL</Label>
+            <Input
+              id="club-website"
+              type="url"
+              value={clubWebsite}
+              onChange={(e) => setClubWebsite(e.target.value)}
+              placeholder="https://example.com"
             />
           </div>
 

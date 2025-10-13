@@ -55,6 +55,7 @@ export default function RegisterChapterModal({
   // Chapter fields
   const [chapterName, setChapterName] = useState('');
   const [chapterDescription, setChapterDescription] = useState('');
+  const [chapterWebsite, setChapterWebsite] = useState('');
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
@@ -111,6 +112,7 @@ export default function RegisterChapterModal({
     setNewClubData(null);
     setChapterName('');
     setChapterDescription('');
+    setChapterWebsite('');
     setAddress('');
     setCity('');
     setState('');
@@ -165,6 +167,7 @@ export default function RegisterChapterModal({
         clubId: string;
         name: string;
         description?: string;
+        website?: string;
         address?: string;
         city?: string;
         state?: string;
@@ -182,6 +185,7 @@ export default function RegisterChapterModal({
 
       // Add optional fields
       if (chapterDescription.trim()) chapterData.description = chapterDescription.trim();
+      if (chapterWebsite.trim()) chapterData.website = chapterWebsite.trim();
       if (address.trim()) chapterData.address = address.trim();
       if (city.trim()) chapterData.city = city.trim();
       if (state.trim()) chapterData.state = state.trim();
@@ -396,6 +400,17 @@ export default function RegisterChapterModal({
                     onChange={(e) => setChapterDescription(e.target.value)}
                     placeholder="Enter chapter description"
                     className="w-full mt-1 p-2 border border-border rounded-md bg-background min-h-[80px]"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <Label htmlFor="chapter-website">Website URL</Label>
+                  <Input
+                    id="chapter-website"
+                    type="url"
+                    value={chapterWebsite}
+                    onChange={(e) => setChapterWebsite(e.target.value)}
+                    placeholder="https://example.com"
                   />
                 </div>
 

@@ -56,6 +56,7 @@ const schema = a.schema({
       city: a.string(),
       state: a.string(),
       zipCode: a.string(),
+      website: a.url(),
       // Required for Map Placement
       latitude: a.float().required(),
       longitude: a.float().required(),

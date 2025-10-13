@@ -20,6 +20,7 @@ interface ClubChapter {
   clubType?: string[];
   name: string;
   description?: string;
+  website?: string;
   address?: string;
   city?: string;
   state?: string;
@@ -91,6 +92,21 @@ export default function ChapterModal({
               <p className="text-sm text-muted-foreground">
                 {chapter.description}
               </p>
+            </div>
+          )}
+
+          {/* Website */}
+          {chapter.website && (
+            <div>
+              <h3 className="font-semibold mb-2">Website</h3>
+              <a
+                href={chapter.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-primary hover:underline"
+              >
+                {chapter.website}
+              </a>
             </div>
           )}
 
