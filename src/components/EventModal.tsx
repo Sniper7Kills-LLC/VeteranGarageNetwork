@@ -1,5 +1,11 @@
-import { X, Calendar, Clock, MapPin } from 'lucide-react';
-import { useEffect } from 'react';
+import { Calendar, Clock, MapPin } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 
 interface Event {
   id: string;
@@ -19,24 +25,7 @@ interface EventModalProps {
 }
 
 export default function EventModal({ event, isOpen, onClose }: EventModalProps) {
-  // Close modal on escape key
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'hidden';
-    }
-    
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen, onClose]);
-  
-  if (!isOpen || !event) return null;
+  if (!event) return null;
   
   // Format date for display
   const formatDate = (dateStr: string) => {
@@ -50,24 +39,8 @@ export default function EventModal({ event, isOpen, onClose }: EventModalProps) 
   };
   
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      
-      {/* Modal */}
-      <div className="relative bg-card border border-border rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 hover:bg-accent rounded-lg transition-colors z-10"
-          aria-label="Close modal"
-        >
-          <X className="w-5 h-5" />
-        </button>
-        
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
         {/* Images */}
         {event.images && event.images.length > 0 && (
           <div className="w-full">
@@ -94,12 +67,14 @@ export default function EventModal({ event, isOpen, onClose }: EventModalProps) 
         {/* Content */}
         <div className="p-6">
           {/* Category badge */}
-          <div className="inline-block px-3 py-1 bg-primary/10 text-primary text-sm font-medium rounded-full mb-3">
+          <Badge className="mb-3 bg-primary/10 text-primary hover:bg-primary/10">
             {event.category}
-          </div>
+          </Badge>
           
           {/* Title */}
-          <h2 className="text-2xl font-bold mb-4">{event.title}</h2>
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-2xl">{event.title}</DialogTitle>
+          </DialogHeader>
           
           {/* Event details */}
           <div className="space-y-3 mb-6">
@@ -127,7 +102,7 @@ export default function EventModal({ event, isOpen, onClose }: EventModalProps) 
             </p>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

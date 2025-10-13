@@ -1,6 +1,18 @@
-import { X, MapPin, Package, DollarSign, Eye } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { MapPin, Package, DollarSign, Eye } from 'lucide-react';
+import { useState } from 'react';
 import ImageCarousel from './ImageCarousel';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 interface Part {
   id: string;
@@ -45,14 +57,10 @@ export default function PartModal({ part, isOpen, onClose }: PartModalProps) {
   });
   const [formSubmitted, setFormSubmitted] = useState(false);
 
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'hidden';
+  // Reset form when modal opens/closes
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      onClose();
       setShowRequestForm(false);
       setFormSubmitted(false);
       setFormData({
@@ -64,14 +72,9 @@ export default function PartModal({ part, isOpen, onClose }: PartModalProps) {
         isFirstResponder: false
       });
     }
+  };
 
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen, onClose]);
-
-  if (!isOpen || !part) return null;
+  if (!part) return null;
 
   const conditionColors = {
     'New': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
@@ -105,10 +108,10 @@ export default function PartModal({ part, isOpen, onClose }: PartModalProps) {
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
+      [name]: value
     }));
   };
 
@@ -119,17 +122,8 @@ export default function PartModal({ part, isOpen, onClose }: PartModalProps) {
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-        <div className="relative w-full max-w-5xl max-h-[90vh] overflow-y-auto bg-background rounded-lg shadow-xl">
-          {/* Close Button */}
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 z-10 p-2 rounded-full bg-background/80 hover:bg-accent transition-colors"
-            aria-label="Close modal"
-          >
-            <X className="w-5 h-5" />
-          </button>
-
+      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-0">
           {/* Main Image */}
           <div className="relative h-96 overflow-hidden cursor-pointer" onClick={() => handleImageClick(0)}>
             <img
@@ -140,18 +134,20 @@ export default function PartModal({ part, isOpen, onClose }: PartModalProps) {
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
             <div className="absolute bottom-6 left-6 right-6">
               <div className="flex items-center gap-3 mb-3 flex-wrap">
-                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${availabilityColors[part.availability]}`}>
+                <Badge className={availabilityColors[part.availability]}>
                   {part.availability}
-                </span>
-                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${conditionColors[part.condition]}`}>
+                </Badge>
+                <Badge className={conditionColors[part.condition]}>
                   {part.condition}
-                </span>
-                <span className="px-3 py-1 rounded-full text-sm font-semibold bg-white/20 text-white backdrop-blur-sm">
+                </Badge>
+                <Badge variant="secondary" className="bg-white/20 text-white backdrop-blur-sm hover:bg-white/20">
                   {part.category}
-                </span>
+                </Badge>
               </div>
-              <h2 className="text-3xl font-bold text-white mb-1">{part.name}</h2>
-              <p className="text-white/90 text-sm">Part #: {part.partNumber}</p>
+              <DialogHeader className="text-left space-y-1 p-0">
+                <DialogTitle className="text-3xl font-bold text-white">{part.name}</DialogTitle>
+                <p className="text-white/90 text-sm">Part #: {part.partNumber}</p>
+              </DialogHeader>
             </div>
           </div>
 
@@ -253,12 +249,13 @@ export default function PartModal({ part, isOpen, onClose }: PartModalProps) {
               <h3 className="text-lg font-semibold mb-4">Compatible Vehicles</h3>
               <div className="flex flex-wrap gap-2">
                 {part.fitment.map((vehicle, index) => (
-                  <span
+                  <Badge
                     key={index}
-                    className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium"
+                    variant="secondary"
+                    className="bg-primary/10 text-primary hover:bg-primary/10"
                   >
                     {vehicle}
-                  </span>
+                  </Badge>
                 ))}
               </div>
             </div>
@@ -292,12 +289,12 @@ export default function PartModal({ part, isOpen, onClose }: PartModalProps) {
                     ? `This part is available to ${part.availability.toLowerCase()} only. Submit a request to connect with the seller.`
                     : 'Submit a request to connect with the seller and get more information.'}
                 </p>
-                <button
+                <Button
                   onClick={() => setShowRequestForm(true)}
-                  className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-semibold w-full md:w-auto"
+                  className="font-semibold w-full md:w-auto"
                 >
                   Request This Part
-                </button>
+                </Button>
               </div>
             ) : (
               <div className="border border-border rounded-lg p-5 bg-card">
@@ -317,53 +314,42 @@ export default function PartModal({ part, isOpen, onClose }: PartModalProps) {
                 ) : (
                   <form onSubmit={handleSubmitRequest} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label htmlFor="name" className="block text-sm font-medium mb-2">
-                          Name *
-                        </label>
-                        <input
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Name *</Label>
+                        <Input
                           type="text"
                           id="name"
                           name="name"
                           required
                           value={formData.name}
                           onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                         />
                       </div>
-                      <div>
-                        <label htmlFor="email" className="block text-sm font-medium mb-2">
-                          Email *
-                        </label>
-                        <input
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email *</Label>
+                        <Input
                           type="email"
                           id="email"
                           name="email"
                           required
                           value={formData.email}
                           onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                         />
                       </div>
                     </div>
-                    <div>
-                      <label htmlFor="phone" className="block text-sm font-medium mb-2">
-                        Phone
-                      </label>
-                      <input
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone</Label>
+                      <Input
                         type="tel"
                         id="phone"
                         name="phone"
                         value={formData.phone}
                         onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
                       />
                     </div>
-                    <div>
-                      <label htmlFor="message" className="block text-sm font-medium mb-2">
-                        Message *
-                      </label>
-                      <textarea
+                    <div className="space-y-2">
+                      <Label htmlFor="message">Message *</Label>
+                      <Textarea
                         id="message"
                         name="message"
                         required
@@ -371,61 +357,65 @@ export default function PartModal({ part, isOpen, onClose }: PartModalProps) {
                         value={formData.message}
                         onChange={handleInputChange}
                         placeholder="Tell the seller about your interest in this part..."
-                        className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                       />
                     </div>
                     {isRestricted && (
                       <div className="border border-border rounded-lg p-4 bg-muted/50">
                         <p className="text-sm font-medium mb-3">Verification Required</p>
                         {part.availability === 'Veterans Only' && (
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              name="isVeteran"
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="isVeteran"
                               checked={formData.isVeteran}
-                              onChange={handleInputChange}
-                              className="w-4 h-4 rounded border-border"
+                              onCheckedChange={(checked) => 
+                                setFormData(prev => ({ ...prev, isVeteran: checked as boolean }))
+                              }
                             />
-                            <span className="text-sm">I am a veteran</span>
-                          </label>
+                            <Label htmlFor="isVeteran" className="cursor-pointer">
+                              I am a veteran
+                            </Label>
+                          </div>
                         )}
                         {part.availability === 'First Responders Only' && (
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              name="isFirstResponder"
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="isFirstResponder"
                               checked={formData.isFirstResponder}
-                              onChange={handleInputChange}
-                              className="w-4 h-4 rounded border-border"
+                              onCheckedChange={(checked) => 
+                                setFormData(prev => ({ ...prev, isFirstResponder: checked as boolean }))
+                              }
                             />
-                            <span className="text-sm">I am a first responder</span>
-                          </label>
+                            <Label htmlFor="isFirstResponder" className="cursor-pointer">
+                              I am a first responder
+                            </Label>
+                          </div>
                         )}
                       </div>
                     )}
                     <div className="flex gap-3">
-                      <button
+                      <Button
                         type="submit"
                         disabled={!canRequest}
-                        className="flex-1 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 font-semibold"
                       >
                         Submit Request
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="button"
+                        variant="outline"
                         onClick={() => setShowRequestForm(false)}
-                        className="px-6 py-3 border border-border rounded-lg hover:bg-accent transition-colors font-semibold"
+                        className="font-semibold"
                       >
                         Cancel
-                      </button>
+                      </Button>
                     </div>
                   </form>
                 )}
               </div>
             )}
           </div>
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Image Carousel */}
       <ImageCarousel

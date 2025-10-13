@@ -1,4 +1,7 @@
 import { MapPin, Package } from 'lucide-react';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 interface Part {
   id: string;
@@ -45,9 +48,9 @@ export default function PartCard({ part, onClick }: PartCardProps) {
   };
 
   return (
-    <div
+    <Card
       onClick={onClick}
-      className="border border-border rounded-lg overflow-hidden bg-card hover:shadow-lg transition-shadow cursor-pointer"
+      className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
     >
       {/* Part Image */}
       <div className="relative h-56 overflow-hidden">
@@ -57,29 +60,29 @@ export default function PartCard({ part, onClick }: PartCardProps) {
           className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
         />
         <div className="absolute top-3 right-3 flex flex-col gap-2">
-          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${availabilityColors[part.availability]}`}>
+          <Badge className={availabilityColors[part.availability]}>
             {part.availability}
-          </span>
-          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${conditionColors[part.condition]}`}>
+          </Badge>
+          <Badge className={conditionColors[part.condition]}>
             {part.condition}
-          </span>
+          </Badge>
         </div>
         <div className="absolute bottom-3 left-3">
-          <span className="px-2 py-1 rounded-full text-xs font-semibold bg-black/70 text-white">
+          <Badge className="bg-black/70 text-white hover:bg-black/70">
             {part.category}
-          </span>
+          </Badge>
         </div>
         {part.images.length > 1 && (
           <div className="absolute bottom-3 right-3">
-            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-black/70 text-white">
+            <Badge className="bg-black/70 text-white hover:bg-black/70">
               +{part.images.length - 1} photos
-            </span>
+            </Badge>
           </div>
         )}
       </div>
 
       {/* Part Content */}
-      <div className="p-4 space-y-3">
+      <CardContent className="p-4 space-y-3">
         {/* Part Name and Price */}
         <div>
           <h3 className="text-lg font-bold mb-1 line-clamp-2">{part.name}</h3>
@@ -111,17 +114,18 @@ export default function PartCard({ part, onClick }: PartCardProps) {
             <p className="text-xs text-muted-foreground mb-2">Fits:</p>
             <div className="flex flex-wrap gap-1">
               {part.fitment.slice(0, 2).map((vehicle, index) => (
-                <span
+                <Badge
                   key={index}
-                  className="px-2 py-1 bg-primary/10 text-primary rounded text-xs font-medium"
+                  variant="secondary"
+                  className="bg-primary/10 text-primary hover:bg-primary/10"
                 >
                   {vehicle}
-                </span>
+                </Badge>
               ))}
               {part.fitment.length > 2 && (
-                <span className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs font-medium">
+                <Badge variant="secondary">
                   +{part.fitment.length - 2} more
-                </span>
+                </Badge>
               )}
             </div>
           </div>
@@ -145,18 +149,20 @@ export default function PartCard({ part, onClick }: PartCardProps) {
             <span>{part.location}</span>
           </div>
         </div>
+      </CardContent>
 
-        {/* Request Button */}
-        <button
+      {/* Request Button */}
+      <CardFooter className="p-4 pt-0">
+        <Button
           onClick={(e) => {
             e.stopPropagation();
             onClick();
           }}
-          className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-semibold text-sm"
+          className="w-full font-semibold"
         >
           Request Part
-        </button>
-      </div>
-    </div>
+        </Button>
+      </CardFooter>
+    </Card>
   );
 }
