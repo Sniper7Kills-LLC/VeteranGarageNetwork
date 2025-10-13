@@ -1,14 +1,18 @@
 import { useState, useMemo } from 'react';
+import { useAuthenticator } from '@aws-amplify/ui-react';
 import ContentWithSidebar from '@/components/layouts/ContentWithSidebar';
 import Map from '@/components/Map';
 import ChapterModal from '@/components/ChapterModal';
+import RegisterChapterModal from '@/components/RegisterChapterModal';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
 
 // Type definitions
 interface Club {
   id: string;
   name: string;
   description?: string;
+  clubType?: string[];
 }
 
 interface ChapterRole {
@@ -23,6 +27,7 @@ interface ClubChapter {
   id: string;
   clubId: string;
   clubName: string;
+  clubType?: string[];
   name: string;
   description?: string;
   address?: string;
@@ -39,23 +44,29 @@ const mockClubs: Club[] = [
     id: 'combat-customs',
     name: 'Combat Customs',
     description: 'Custom motorcycle builders and enthusiasts',
+    clubType: ['Military Only', 'Public'],
   },
   {
     id: 'final-call',
     name: 'Final Call',
     description: 'Veteran motorcycle club',
+    clubType: ['Military Only', 'First Responders'],
   },
   {
     id: 'hog',
     name: 'HOG (Harley Owners Group)',
     description: 'Official Harley-Davidson riding club',
+    clubType: ['Public'],
   },
   {
     id: 'veterans-garage',
     name: 'Veterans Garage',
     description: 'Supporting veterans through automotive therapy',
+    clubType: ['Military Only', 'Public'],
   },
 ];
+
+const CLUB_TYPES = ['Public', 'First Responders', 'Military Only', 'LE Only', 'Fire Only'];
 
 // Mock data for club chapters
 const mockChapters: ClubChapter[] = [
@@ -64,6 +75,7 @@ const mockChapters: ClubChapter[] = [
     id: 'cc-sd',
     clubId: 'combat-customs',
     clubName: 'Combat Customs',
+    clubType: ['Military Only', 'Public'],
     name: 'Combat Customs - San Diego',
     description: 'San Diego chapter specializing in custom builds and veteran support',
     address: '1234 Custom Ave',
@@ -98,6 +110,7 @@ const mockChapters: ClubChapter[] = [
     id: 'cc-la',
     clubId: 'combat-customs',
     clubName: 'Combat Customs',
+    clubType: ['Military Only', 'Public'],
     name: 'Combat Customs - Los Angeles',
     description: 'LA chapter focused on custom motorcycle culture',
     address: '5678 Sunset Blvd',
@@ -126,6 +139,7 @@ const mockChapters: ClubChapter[] = [
     id: 'fc-austin',
     clubId: 'final-call',
     clubName: 'Final Call',
+    clubType: ['Military Only', 'First Responders'],
     name: 'Final Call - Austin',
     description: 'Austin chapter of veteran riders',
     address: '910 Congress Ave',
@@ -166,6 +180,7 @@ const mockChapters: ClubChapter[] = [
     id: 'fc-dallas',
     clubId: 'final-call',
     clubName: 'Final Call',
+    clubType: ['Military Only', 'First Responders'],
     name: 'Final Call - Dallas',
     description: 'Dallas-Fort Worth chapter',
     city: 'Dallas',
@@ -193,6 +208,7 @@ const mockChapters: ClubChapter[] = [
     id: 'hog-denver',
     clubId: 'hog',
     clubName: 'HOG (Harley Owners Group)',
+    clubType: ['Public'],
     name: 'Mile High HOG - Denver',
     description: 'Denver area Harley Owners Group',
     address: '2468 Harley Way',
@@ -233,6 +249,7 @@ const mockChapters: ClubChapter[] = [
     id: 'hog-seattle',
     clubId: 'hog',
     clubName: 'HOG (Harley Owners Group)',
+    clubType: ['Public'],
     name: 'Emerald City HOG - Seattle',
     description: 'Seattle Harley Owners Group',
     address: '1357 Pike St',
@@ -268,6 +285,7 @@ const mockChapters: ClubChapter[] = [
     id: 'vg-miami',
     clubId: 'veterans-garage',
     clubName: 'Veterans Garage',
+    clubType: ['Military Only', 'Public'],
     name: 'Veterans Garage - Miami',
     description: 'Miami chapter providing automotive therapy for veterans',
     address: '7890 Ocean Dr',
@@ -302,6 +320,7 @@ const mockChapters: ClubChapter[] = [
     id: 'vg-phoenix',
     clubId: 'veterans-garage',
     clubName: 'Veterans Garage',
+    clubType: ['Military Only', 'Public'],
     name: 'Veterans Garage - Phoenix',
     description: 'Phoenix chapter supporting veterans through automotive projects',
     city: 'Phoenix',
@@ -330,15 +349,23 @@ function ClubsSidebar({
   clubs,
   selectedClubIds,
   onClubToggle,
+  selectedClubTypes,
+  onClubTypeToggle,
+  isAuthenticated,
+  onRegisterClick,
 }: {
   clubs: Club[];
   selectedClubIds: Set<string>;
   onClubToggle: (clubId: string) => void;
+  selectedClubTypes: Set<string>;
+  onClubTypeToggle: (clubType: string) => void;
+  isAuthenticated: boolean;
+  onRegisterClick: () => void;
 }) {
-  const allSelected = selectedClubIds.size === clubs.length;
+  const allClubsSelected = selectedClubIds.size === clubs.length;
 
-  const handleAllToggle = () => {
-    if (allSelected) {
+  const handleAllClubsToggle = () => {
+    if (allClubsSelected) {
       // Deselect all
       clubs.forEach((club) => {
         if (selectedClubIds.has(club.id)) {
@@ -357,6 +384,13 @@ function ClubsSidebar({
 
   return (
     <div className="space-y-6">
+      {/* Register Chapter Button */}
+      {isAuthenticated && (
+        <Button onClick={onRegisterClick} className="w-full">
+          Register a Chapter
+        </Button>
+      )}
+      {/* Filter by Club */}
       <div className="p-4 border border-border rounded-lg bg-card">
         <h3 className="font-semibold mb-3">Filter by Club</h3>
         <div className="space-y-3">
@@ -364,8 +398,8 @@ function ClubsSidebar({
           <div className="flex items-center space-x-2">
             <Checkbox
               id="all-clubs"
-              checked={allSelected}
-              onCheckedChange={handleAllToggle}
+              checked={allClubsSelected}
+              onCheckedChange={handleAllClubsToggle}
             />
             <label
               htmlFor="all-clubs"
@@ -395,18 +429,43 @@ function ClubsSidebar({
           ))}
         </div>
       </div>
+
+      {/* Filter by Club Type */}
+      <div className="p-4 border border-border rounded-lg bg-card">
+        <h3 className="font-semibold mb-3">Filter by Club Type</h3>
+        <div className="space-y-3">
+          {CLUB_TYPES.map((type) => (
+            <div key={type} className="flex items-center space-x-2">
+              <Checkbox
+                id={`type-${type}`}
+                checked={selectedClubTypes.has(type)}
+                onCheckedChange={() => onClubTypeToggle(type)}
+              />
+              <label
+                htmlFor={`type-${type}`}
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+              >
+                {type}
+              </label>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
 
 export default function Clubs() {
+  const { authStatus } = useAuthenticator((context) => [context.authStatus]);
   const [selectedClubIds, setSelectedClubIds] = useState<Set<string>>(
     new Set(mockClubs.map((club) => club.id))
   );
+  const [selectedClubTypes, setSelectedClubTypes] = useState<Set<string>>(new Set());
   const [selectedChapterId, setSelectedChapterId] = useState<string | null>(
     null
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
 
   const handleClubToggle = (clubId: string) => {
     setSelectedClubIds((prev) => {
@@ -420,11 +479,40 @@ export default function Clubs() {
     });
   };
 
+  const handleClubTypeToggle = (clubType: string) => {
+    setSelectedClubTypes((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(clubType)) {
+        newSet.delete(clubType);
+      } else {
+        newSet.add(clubType);
+      }
+      return newSet;
+    });
+  };
+
   const filteredChapters = useMemo(() => {
-    return mockChapters.filter((chapter) =>
-      selectedClubIds.has(chapter.clubId)
-    );
-  }, [selectedClubIds]);
+    return mockChapters.filter((chapter) => {
+      // Filter by selected clubs
+      if (!selectedClubIds.has(chapter.clubId)) {
+        return false;
+      }
+
+      // Filter by club types (OR logic)
+      // If no types selected, show all
+      if (selectedClubTypes.size === 0) {
+        return true;
+      }
+
+      // Check if the club has any of the selected types
+      const club = mockClubs.find((c) => c.id === chapter.clubId);
+      if (!club || !club.clubType) {
+        return false;
+      }
+
+      return club.clubType.some((type) => selectedClubTypes.has(type));
+    });
+  }, [selectedClubIds, selectedClubTypes]);
 
   const mapLocations = useMemo(() => {
     return filteredChapters.map((chapter) => ({
@@ -446,6 +534,13 @@ export default function Clubs() {
     return mockChapters.find((chapter) => chapter.id === selectedChapterId) || null;
   }, [selectedChapterId]);
 
+  const handleRegisterSuccess = () => {
+    // Handle successful registration (e.g., refresh data, show toast)
+    console.log('Chapter registration successful');
+  };
+
+  const isAuthenticated = authStatus === 'authenticated';
+
   return (
     <ContentWithSidebar
       sidebar={
@@ -453,6 +548,10 @@ export default function Clubs() {
           clubs={mockClubs}
           selectedClubIds={selectedClubIds}
           onClubToggle={handleClubToggle}
+          selectedClubTypes={selectedClubTypes}
+          onClubTypeToggle={handleClubTypeToggle}
+          isAuthenticated={isAuthenticated}
+          onRegisterClick={() => setIsRegisterModalOpen(true)}
         />
       }
     >
@@ -477,6 +576,13 @@ export default function Clubs() {
         chapter={selectedChapter}
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
+      />
+
+      <RegisterChapterModal
+        clubs={mockClubs}
+        open={isRegisterModalOpen}
+        onOpenChange={setIsRegisterModalOpen}
+        onSuccess={handleRegisterSuccess}
       />
     </ContentWithSidebar>
   );

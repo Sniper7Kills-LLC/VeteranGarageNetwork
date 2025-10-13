@@ -17,6 +17,7 @@ interface ClubChapter {
   id: string;
   clubId: string;
   clubName: string;
+  clubType?: string[];
   name: string;
   description?: string;
   address?: string;
@@ -49,6 +50,23 @@ export default function ChapterModal({
         </DialogHeader>
 
         <div className="space-y-6 mt-4">
+          {/* Club Types */}
+          {chapter.clubType && chapter.clubType.length > 0 && (
+            <div>
+              <h3 className="font-semibold mb-2">Club Types</h3>
+              <div className="flex flex-wrap gap-2">
+                {chapter.clubType.map((type) => (
+                  <span
+                    key={type}
+                    className="px-3 py-1 text-sm bg-primary/10 text-primary rounded-full"
+                  >
+                    {type}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Location Information */}
           {(chapter.address || chapter.city || chapter.state) && (
             <div>
