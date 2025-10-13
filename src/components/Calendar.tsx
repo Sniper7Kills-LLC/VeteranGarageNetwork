@@ -9,6 +9,9 @@ interface Event {
   description: string;
   category: string;
   images?: string[];
+  lat: number;
+  lng: number;
+  route?: [number, number][];
 }
 
 interface CalendarProps {
@@ -100,10 +103,19 @@ export default function Calendar({
           isToday ? 'ring-2 ring-primary' : ''
         }`}
       >
-        {/* Day number */}
-        <div className={`text-sm font-semibold mb-1 ${isToday ? 'text-primary' : ''}`}>
+        {/* Day number - clickable if there are events */}
+        <button
+          onClick={() => dayEvents.length > 0 && onViewAllClick(new Date(year, month, day))}
+          className={`text-sm font-semibold mb-1 text-left ${
+            isToday ? 'text-primary' : ''
+          } ${
+            dayEvents.length > 0 ? 'hover:underline cursor-pointer' : 'cursor-default'
+          }`}
+          disabled={dayEvents.length === 0}
+          title={dayEvents.length > 0 ? 'View all events for this day' : ''}
+        >
           {day}
-        </div>
+        </button>
         
         {/* Events list */}
         <div className="flex-1 space-y-1 overflow-hidden">

@@ -123,7 +123,7 @@ export default function PartModal({ part, isOpen, onClose }: PartModalProps) {
   return (
     <>
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-0">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
           {/* Main Image */}
           <div className="relative h-96 overflow-hidden cursor-pointer" onClick={() => handleImageClick(0)}>
             <img

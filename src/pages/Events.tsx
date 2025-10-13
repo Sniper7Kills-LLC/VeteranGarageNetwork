@@ -13,6 +13,9 @@ interface Event {
   description: string;
   category: string;
   images?: string[];
+  lat: number;
+  lng: number;
+  route?: [number, number][]; // Array of [lat, lng] coordinates for ride routes
 }
 
 // Static event data
@@ -25,7 +28,9 @@ const EVENTS: Event[] = [
     location: 'Veterans Memorial Park, Main Street',
     description: 'Join fellow veteran car enthusiasts for a casual meet and greet. Share stories, show off your rides, and connect with the community. Coffee and donuts provided!',
     category: 'Meetup',
-    images: ['https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800&h=600&fit=crop']
+    images: ['https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800&h=600&fit=crop'],
+    lat: 37.7749,
+    lng: -122.4194
   },
   {
     id: '1a',
@@ -35,7 +40,14 @@ const EVENTS: Event[] = [
     location: 'Downtown Coffee Shop',
     description: 'Start your day with a casual morning cruise and coffee with fellow veterans. Bring your ride and enjoy good company!',
     category: 'Ride',
-    images: ['https://images.unsplash.com/photo-1511919884226-fd3cad34687c?w=800&h=600&fit=crop']
+    images: ['https://images.unsplash.com/photo-1511919884226-fd3cad34687c?w=800&h=600&fit=crop'],
+    lat: 37.7849,
+    lng: -122.4094,
+    route: [
+      [37.7849, -122.4094], // Start: Downtown Coffee Shop
+      [37.7949, -122.3994], // Waypoint: Through the park
+      [37.8049, -122.3894], // End: Scenic overlook
+    ]
   },
   {
     id: '1b',
@@ -45,6 +57,8 @@ const EVENTS: Event[] = [
     location: 'Mike\'s Auto Shop, 789 Elm Street',
     description: 'Hands-on workshop covering engine rebuild basics. Learn from experienced mechanics and get your hands dirty!',
     category: 'Workshop',
+    lat: 37.7649,
+    lng: -122.4294
   },
   {
     id: '1c',
@@ -54,7 +68,9 @@ const EVENTS: Event[] = [
     location: 'City Park Pavilion',
     description: 'Showcase of vintage motorcycles from the 1940s-1980s. Free admission, awards for best bikes in various categories.',
     category: 'Show',
-    images: ['https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&h=600&fit=crop']
+    images: ['https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&h=600&fit=crop'],
+    lat: 37.7699,
+    lng: -122.4344
   },
   {
     id: '1d',
@@ -64,7 +80,9 @@ const EVENTS: Event[] = [
     location: 'Veteran\'s Speedway',
     description: 'Afternoon of BBQ, burnouts, and good times. Bring your muscle car and show us what it can do! Food provided.',
     category: 'Meetup',
-    images: ['https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&h=600&fit=crop']
+    images: ['https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&h=600&fit=crop'],
+    lat: 37.7549,
+    lng: -122.4444
   },
   {
     id: '1e',
@@ -74,7 +92,15 @@ const EVENTS: Event[] = [
     location: 'Meeting at Highway 1 Overlook',
     description: 'Beautiful sunset cruise along the coastal highway. We\'ll stop at scenic points and end with dinner at a beachside restaurant.',
     category: 'Ride',
-    images: ['https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop']
+    images: ['https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop'],
+    lat: 37.7449,
+    lng: -122.4544,
+    route: [
+      [37.7449, -122.4544], // Start: Highway 1 Overlook
+      [37.7299, -122.4744], // Waypoint: Scenic viewpoint
+      [37.7099, -122.4944], // Waypoint: Coastal stop
+      [37.6999, -122.5044], // End: Beachside restaurant
+    ]
   },
   {
     id: '1f',
@@ -84,6 +110,8 @@ const EVENTS: Event[] = [
     location: 'Industrial District',
     description: 'Learn automotive night photography techniques. Bring your camera and your ride for an evening photo shoot.',
     category: 'Meetup',
+    lat: 37.7599,
+    lng: -122.4244
   },
   {
     id: '2',
@@ -93,7 +121,15 @@ const EVENTS: Event[] = [
     location: 'Starting at Highway 101 Rest Stop',
     description: 'A beautiful scenic drive through the mountains. We\'ll take the backroads and stop for lunch at a local diner. All vehicle types welcome!',
     category: 'Ride',
-    images: ['https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800&h=600&fit=crop']
+    images: ['https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800&h=600&fit=crop'],
+    lat: 37.8749,
+    lng: -122.2694,
+    route: [
+      [37.8749, -122.2694], // Start: Highway 101 Rest Stop
+      [37.9049, -122.2394], // Waypoint: Mountain pass
+      [37.9249, -122.2194], // Waypoint: Scenic overlook
+      [37.9349, -122.2094], // End: Mountain diner
+    ]
   },
   {
     id: '3',
@@ -103,7 +139,9 @@ const EVENTS: Event[] = [
     location: 'County Fairgrounds',
     description: 'Annual classic car show featuring vehicles from the 1920s to 1980s. Awards for best in show, people\'s choice, and more. Food trucks and live music all day.',
     category: 'Show',
-    images: ['https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=800&h=600&fit=crop']
+    images: ['https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=800&h=600&fit=crop'],
+    lat: 37.7949,
+    lng: -122.3994
   },
   {
     id: '4',
@@ -113,6 +151,8 @@ const EVENTS: Event[] = [
     location: 'Joe\'s Garage, 456 Oak Avenue',
     description: 'Learn basic car maintenance skills! This month we\'re covering oil changes, tire rotation, and brake inspection. Bring your questions and tools.',
     category: 'Workshop',
+    lat: 37.7849,
+    lng: -122.4144
   },
   {
     id: '5',
@@ -122,7 +162,9 @@ const EVENTS: Event[] = [
     location: 'Downtown Main Street',
     description: 'Join us in the annual Veterans Day parade. Classic cars and motorcycles welcome. Let\'s show our pride and honor our service together.',
     category: 'Parade',
-    images: ['https://images.unsplash.com/photo-1464037866556-6812c9d1c72e?w=800&h=600&fit=crop']
+    images: ['https://images.unsplash.com/photo-1464037866556-6812c9d1c72e?w=800&h=600&fit=crop'],
+    lat: 37.7799,
+    lng: -122.4194
   },
   {
     id: '6',
@@ -132,6 +174,13 @@ const EVENTS: Event[] = [
     location: 'Beach Parking Lot A',
     description: 'Cruise along the beautiful coastal highway. We\'ll stop at scenic overlooks and have lunch at a beachside restaurant. Perfect weather expected!',
     category: 'Ride',
+    lat: 37.7249,
+    lng: -122.4794,
+    route: [
+      [37.7249, -122.4794], // Start: Beach Parking Lot A
+      [37.7049, -122.4994], // Waypoint: Coastal viewpoint
+      [37.6849, -122.5194], // End: Coastal restaurant
+    ]
   },
   {
     id: '7',
@@ -141,6 +190,8 @@ const EVENTS: Event[] = [
     location: 'Veterans Center Parking Lot',
     description: 'Our monthly casual gathering. Bring your car, truck, or motorcycle and enjoy coffee with fellow veterans. No registration required, just show up!',
     category: 'Meetup',
+    lat: 37.7749,
+    lng: -122.4094
   },
 ];
 

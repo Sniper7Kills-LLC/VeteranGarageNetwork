@@ -1,4 +1,5 @@
-import { Clock, MapPin } from 'lucide-react';
+import { useState } from 'react';
+import { Clock, MapPin, Map as MapIcon, List } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -8,6 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import Map from '@/components/Map';
 
 interface Event {
   id: string;
@@ -18,6 +20,9 @@ interface Event {
   description: string;
   category: string;
   images?: string[];
+  lat: number;
+  lng: number;
+  route?: [number, number][];
 }
 
 interface DayEventsModalProps {
@@ -29,6 +34,8 @@ interface DayEventsModalProps {
 }
 
 export default function DayEventsModal({ date, events, isOpen, onClose, onEventClick }: DayEventsModalProps) {
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  
   if (!date) return null;
   
   const formatDate = (date: Date) => {
@@ -39,61 +46,121 @@ export default function DayEventsModal({ date, events, isOpen, onClose, onEventC
       day: 'numeric' 
     });
   };
+
+  // Convert events to map locations
+  const mapLocations = events.map(event => ({
+    id: event.id,
+    name: event.title,
+    lat: event.lat,
+    lng: event.lng,
+    description: `${event.time} - ${event.category}`
+  }));
+
+  // Calculate center point for map
+  const centerLat = events.length > 0 
+    ? events.reduce((sum, e) => sum + e.lat, 0) / events.length 
+    : 37.7749;
+  const centerLng = events.length > 0 
+    ? events.reduce((sum, e) => sum + e.lng, 0) / events.length 
+    : -122.4194;
+
+  const handleMarkerClick = (locationId: string) => {
+    const event = events.find(e => e.id === locationId);
+    if (event) {
+      onEventClick(event);
+      onClose();
+    }
+  };
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
         {/* Header */}
         <DialogHeader>
-          <DialogTitle className="text-2xl">
-            Events on {formatDate(date)}
-          </DialogTitle>
-          <DialogDescription>
-            {events.length} {events.length === 1 ? 'event' : 'events'}
-          </DialogDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle className="text-2xl">
+                Events on {formatDate(date)}
+              </DialogTitle>
+              <DialogDescription>
+                {events.length} {events.length === 1 ? 'event' : 'events'}
+              </DialogDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')}
+              className="flex items-center gap-2"
+            >
+              {viewMode === 'list' ? (
+                <>
+                  <MapIcon className="w-4 h-4" />
+                  Map View
+                </>
+              ) : (
+                <>
+                  <List className="w-4 h-4" />
+                  List View
+                </>
+              )}
+            </Button>
+          </div>
         </DialogHeader>
         
-        {/* Events list */}
-        <div className="flex-1 overflow-y-auto -mx-6 px-6">
-          <div className="space-y-3">
-            {events.map(event => (
-              <Button
-                key={event.id}
-                variant="outline"
-                onClick={() => {
-                  onEventClick(event);
-                  onClose();
-                }}
-                className="w-full h-auto p-4 text-left justify-start hover:bg-accent"
-              >
-                <div className="flex gap-4 w-full">
-                  {event.images && event.images.length > 0 && (
-                    <img 
-                      src={event.images[0]} 
-                      alt={event.title}
-                      className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
-                    />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <Badge className="mb-2 bg-primary/10 text-primary hover:bg-primary/10">
-                      {event.category}
-                    </Badge>
-                    <h3 className="font-semibold mb-2">{event.title}</h3>
-                    <div className="space-y-1 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 flex-shrink-0" />
-                        <span>{event.time}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate">{event.location}</span>
+        {/* Content - List or Map View */}
+        <div className="flex-1 overflow-hidden -mx-6 px-6">
+          {viewMode === 'list' ? (
+            <div className="h-full overflow-y-auto">
+              <div className="space-y-3">
+                {events.map(event => (
+                  <Button
+                    key={event.id}
+                    variant="outline"
+                    onClick={() => {
+                      onEventClick(event);
+                      onClose();
+                    }}
+                    className="w-full h-auto p-4 text-left justify-start hover:bg-accent"
+                  >
+                    <div className="flex gap-4 w-full">
+                      {event.images && event.images.length > 0 && (
+                        <img 
+                          src={event.images[0]} 
+                          alt={event.title}
+                          className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <Badge className="mb-2 bg-primary/10 text-primary hover:bg-primary/10">
+                          {event.category}
+                        </Badge>
+                        <h3 className="font-semibold mb-2">{event.title}</h3>
+                        <div className="space-y-1 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 flex-shrink-0" />
+                            <span>{event.time}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4 flex-shrink-0" />
+                            <span className="truncate">{event.location}</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              </Button>
-            ))}
-          </div>
+                  </Button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="h-full">
+              <Map
+                locations={mapLocations}
+                center={[centerLat, centerLng]}
+                zoom={13}
+                onMarkerClick={handleMarkerClick}
+              />
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
