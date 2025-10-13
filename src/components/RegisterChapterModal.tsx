@@ -11,12 +11,24 @@ import { Label } from '@/components/ui/label';
 import CreateClubModal from './CreateClubModal';
 import LocationPickerMap from './LocationPickerMap';
 
-interface Club {
-  id: string;
-  name: string;
-  description?: string;
-  clubType?: string[];
-}
+/**
+ * AWS Amplify Start
+ */
+// Imports
+//import { generateClient } from "aws-amplify/data";
+import type { Schema } from "@/../amplify/data/resource";
+
+// Create the Client
+//const client = generateClient<Schema>()
+
+//Get the Data
+//const { data: clubs } = await client.models.Club.list()
+
+// Type definitions
+type Club = Schema['Club']['type'];
+/**
+ * AWS Amplify End
+ */
 
 interface RegisterChapterModalProps {
   clubs: Club[];

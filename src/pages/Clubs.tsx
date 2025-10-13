@@ -7,19 +7,24 @@ import RegisterChapterModal from '@/components/RegisterChapterModal';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 
+/**
+ * AWS Amplify Start
+ */
+// Imports
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/../amplify/data/resource";
 
+// Create the Client
 const client = generateClient<Schema>()
+
+//Get the Data
 const { data: clubs } = await client.models.Club.list()
 
 // Type definitions
-interface Club {
-  id: string;
-  name: string;
-  description?: string;
-  clubType?: string[];
-}
+type Club = Schema['Club']['type'];
+/**
+ * AWS Amplify End
+ */
 
 interface ChapterRole {
   id: string;
@@ -115,216 +120,7 @@ const mockChapters: ClubChapter[] = [
         email: 'lisa.c@combatcustoms.com',
       },
     ],
-  },
-  // Final Call Chapters
-  {
-    id: 'fc-austin',
-    clubId: 'final-call',
-    clubName: 'Final Call',
-    clubType: ['Military Only', 'First Responders'],
-    name: 'Final Call - Austin',
-    description: 'Austin chapter of veteran riders',
-    address: '910 Congress Ave',
-    city: 'Austin',
-    state: 'TX',
-    latitude: 30.2672,
-    longitude: -97.7431,
-    roles: [
-      {
-        id: 'fc-austin-1',
-        roleTitle: 'President',
-        personName: 'James Wilson',
-        email: 'james.w@finalcall.org',
-        phone: '(512) 555-0301',
-      },
-      {
-        id: 'fc-austin-2',
-        roleTitle: 'Vice President',
-        personName: 'Patricia Brown',
-        email: 'patricia.b@finalcall.org',
-        phone: '(512) 555-0302',
-      },
-      {
-        id: 'fc-austin-3',
-        roleTitle: 'Treasurer',
-        personName: 'David Lee',
-        email: 'david.l@finalcall.org',
-      },
-      {
-        id: 'fc-austin-4',
-        roleTitle: 'Road Captain',
-        personName: 'Jennifer Garcia',
-        phone: '(512) 555-0304',
-      },
-    ],
-  },
-  {
-    id: 'fc-dallas',
-    clubId: 'final-call',
-    clubName: 'Final Call',
-    clubType: ['Military Only', 'First Responders'],
-    name: 'Final Call - Dallas',
-    description: 'Dallas-Fort Worth chapter',
-    city: 'Dallas',
-    state: 'TX',
-    latitude: 32.7767,
-    longitude: -96.7970,
-    roles: [
-      {
-        id: 'fc-dallas-1',
-        roleTitle: 'President',
-        personName: 'Thomas Anderson',
-        email: 'thomas.a@finalcall.org',
-        phone: '(214) 555-0401',
-      },
-      {
-        id: 'fc-dallas-2',
-        roleTitle: 'Secretary',
-        personName: 'Maria Rodriguez',
-        email: 'maria.r@finalcall.org',
-      },
-    ],
-  },
-  // HOG Chapters
-  {
-    id: 'hog-denver',
-    clubId: 'hog',
-    clubName: 'HOG (Harley Owners Group)',
-    clubType: ['Public'],
-    name: 'Mile High HOG - Denver',
-    description: 'Denver area Harley Owners Group',
-    address: '2468 Harley Way',
-    city: 'Denver',
-    state: 'CO',
-    latitude: 39.7392,
-    longitude: -104.9903,
-    roles: [
-      {
-        id: 'hog-denver-1',
-        roleTitle: 'Director',
-        personName: 'William Taylor',
-        email: 'william.t@milehighhog.com',
-        phone: '(303) 555-0501',
-      },
-      {
-        id: 'hog-denver-2',
-        roleTitle: 'Assistant Director',
-        personName: 'Susan White',
-        email: 'susan.w@milehighhog.com',
-        phone: '(303) 555-0502',
-      },
-      {
-        id: 'hog-denver-3',
-        roleTitle: 'Treasurer',
-        personName: 'Charles Harris',
-        email: 'charles.h@milehighhog.com',
-      },
-      {
-        id: 'hog-denver-4',
-        roleTitle: 'Safety Officer',
-        personName: 'Nancy Clark',
-        email: 'nancy.c@milehighhog.com',
-      },
-    ],
-  },
-  {
-    id: 'hog-seattle',
-    clubId: 'hog',
-    clubName: 'HOG (Harley Owners Group)',
-    clubType: ['Public'],
-    name: 'Emerald City HOG - Seattle',
-    description: 'Seattle Harley Owners Group',
-    address: '1357 Pike St',
-    city: 'Seattle',
-    state: 'WA',
-    latitude: 47.6062,
-    longitude: -122.3321,
-    roles: [
-      {
-        id: 'hog-seattle-1',
-        roleTitle: 'Director',
-        personName: 'Richard Lewis',
-        email: 'richard.l@emeraldcityhog.com',
-        phone: '(206) 555-0601',
-      },
-      {
-        id: 'hog-seattle-2',
-        roleTitle: 'Secretary',
-        personName: 'Karen Walker',
-        email: 'karen.w@emeraldcityhog.com',
-      },
-      {
-        id: 'hog-seattle-3',
-        roleTitle: 'Activities Officer',
-        personName: 'Steven Hall',
-        email: 'steven.h@emeraldcityhog.com',
-        phone: '(206) 555-0603',
-      },
-    ],
-  },
-  // Veterans Garage Chapters
-  {
-    id: 'vg-miami',
-    clubId: 'veterans-garage',
-    clubName: 'Veterans Garage',
-    clubType: ['Military Only', 'Public'],
-    name: 'Veterans Garage - Miami',
-    description: 'Miami chapter providing automotive therapy for veterans',
-    address: '7890 Ocean Dr',
-    city: 'Miami',
-    state: 'FL',
-    latitude: 25.7617,
-    longitude: -80.1918,
-    roles: [
-      {
-        id: 'vg-miami-1',
-        roleTitle: 'Chapter Lead',
-        personName: 'Daniel Young',
-        email: 'daniel.y@veteransgarage.org',
-        phone: '(305) 555-0701',
-      },
-      {
-        id: 'vg-miami-2',
-        roleTitle: 'Operations Manager',
-        personName: 'Michelle King',
-        email: 'michelle.k@veteransgarage.org',
-        phone: '(305) 555-0702',
-      },
-      {
-        id: 'vg-miami-3',
-        roleTitle: 'Volunteer Coordinator',
-        personName: 'Christopher Wright',
-        email: 'chris.w@veteransgarage.org',
-      },
-    ],
-  },
-  {
-    id: 'vg-phoenix',
-    clubId: 'veterans-garage',
-    clubName: 'Veterans Garage',
-    clubType: ['Military Only', 'Public'],
-    name: 'Veterans Garage - Phoenix',
-    description: 'Phoenix chapter supporting veterans through automotive projects',
-    city: 'Phoenix',
-    state: 'AZ',
-    latitude: 33.4484,
-    longitude: -112.0740,
-    roles: [
-      {
-        id: 'vg-phoenix-1',
-        roleTitle: 'Chapter Lead',
-        personName: 'Amanda Scott',
-        email: 'amanda.s@veteransgarage.org',
-        phone: '(602) 555-0801',
-      },
-      {
-        id: 'vg-phoenix-2',
-        roleTitle: 'Treasurer',
-        personName: 'Brian Green',
-        email: 'brian.g@veteransgarage.org',
-      },
-    ],
-  },
+  }
 ];
 
 function ClubsSidebar({
@@ -440,7 +236,7 @@ function ClubsSidebar({
 export default function Clubs() {
   const { authStatus } = useAuthenticator((context) => [context.authStatus]);
   const [selectedClubIds, setSelectedClubIds] = useState<Set<string>>(
-    new Set(clubs.map((club) => club.id))
+    new Set(clubs?.map((club) => club.id) ?? [])
   );
   const [selectedClubTypes, setSelectedClubTypes] = useState<Set<string>>(new Set());
   const [selectedChapterId, setSelectedChapterId] = useState<string | null>(
@@ -487,12 +283,12 @@ export default function Clubs() {
       }
 
       // Check if the club has any of the selected types
-      const club = clubs.find((c) => c.id === chapter.clubId);
+      const club = clubs?.find((c) => c.id === chapter.clubId);
       if (!club || !club.clubType) {
         return false;
       }
 
-      return club.clubType.some((type) => selectedClubTypes.has(type));
+      return club.clubType.some((type) => type && selectedClubTypes.has(type));
     });
   }, [selectedClubIds, selectedClubTypes]);
 
@@ -527,7 +323,7 @@ export default function Clubs() {
     <ContentWithSidebar
       sidebar={
         <ClubsSidebar
-          clubs={clubs}
+          clubs={clubs ?? []}
           selectedClubIds={selectedClubIds}
           onClubToggle={handleClubToggle}
           selectedClubTypes={selectedClubTypes}
@@ -561,7 +357,7 @@ export default function Clubs() {
       />
 
       <RegisterChapterModal
-        clubs={clubs}
+        clubs={clubs ?? []}
         open={isRegisterModalOpen}
         onOpenChange={setIsRegisterModalOpen}
         onSuccess={handleRegisterSuccess}

@@ -30,3 +30,5 @@ dist-ssr
 .amplify
 amplify_outputs*
 amplifyconfiguration*
+# AI Generated Resoruce Example
+amplify/data/resources-new.ts
