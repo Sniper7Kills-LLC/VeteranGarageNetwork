@@ -69,3 +69,22 @@ export const SHOP_SERVICE_DESCRIPTIONS: Record<string, string> = {
   'Engine_Rebuilds': 'Complete engine rebuild services',
   'Detailing': 'Professional detailing services'
 };
+
+// Association Relationship Types
+export const ASSOCIATION_RELATIONSHIP_VALUES = [
+  'Sponsor',
+  'Partner',
+  'Affiliated',
+  'Supporter',
+  'Other',
+] as const;
+
+export type AssociationRelationship = typeof ASSOCIATION_RELATIONSHIP_VALUES[number];
+
+export const ASSOCIATION_RELATIONSHIP_DESCRIPTIONS: Record<string, string> = {
+  'Sponsor': 'Provides financial or material support to the organization',
+  'Partner': 'Collaborative relationship with shared goals and mutual benefits',
+  'Affiliated': 'Officially connected or associated with the organization',
+  'Supporter': 'Actively supports the organization through various means',
+  'Other': 'Custom relationship type not covered by standard categories'
+};

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuthenticator } from '@aws-amplify/ui-react';
 import {
   Dialog,
   DialogContent,
@@ -15,6 +16,14 @@ import LocationPickerMap from '@/components/LocationPickerMap';
 import { SHOP_SERVICE_VALUES, SHOP_SERVICE_DESCRIPTIONS } from '@/../amplify/config/enums';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/../amplify/data/resource';
+import ClubAssociationSelector from '@/components/ClubAssociationSelector';
+import ChapterAssociationSelector from '@/components/ChapterAssociationSelector';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 
 interface CreateShopModalProps {
   open: boolean;
@@ -22,11 +31,29 @@ interface CreateShopModalProps {
   onSuccess: () => void;
 }
 
+interface ClubAssociation {
+  clubId: string;
+  clubName: string;
+  approved: boolean;
+  relationship: string;
+  details: string;
+}
+
+interface ChapterAssociation {
+  chapterId: string;
+  chapterName: string;
+  clubName: string;
+  approved: boolean;
+  relationship: string;
+  details: string;
+}
+
 export default function CreateShopModal({
   open,
   onOpenChange,
   onSuccess,
 }: CreateShopModalProps) {
+  const { authStatus } = useAuthenticator((context) => [context.authStatus]);
   const [shopName, setShopName] = useState('');
   const [shopDescription, setShopDescription] = useState('');
   const [address, setAddress] = useState('');
@@ -42,6 +69,24 @@ export default function CreateShopModal({
   const [adminNotes, setAdminNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Club and Chapter association state
+  const [clubs, setClubs] = useState<Array<{ id: string; name: string; description: string | null; approved: boolean }>>([]);
+  const [chapters, setChapters] = useState<Array<{ id: string; name: string; description: string | null; clubName: string; approved: boolean }>>([]);
+  const [loadingClubs, setLoadingClubs] = useState(false);
+  const [loadingChapters, setLoadingChapters] = useState(false);
+  const [selectedClubIds, setSelectedClubIds] = useState<string[]>([]);
+  const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>([]);
+  const [clubAssociations, setClubAssociations] = useState<Record<string, { relationship: string; details: string }>>({});
+  const [chapterAssociations, setChapterAssociations] = useState<Record<string, { relationship: string; details: string }>>({});
+  
+  // Search and pagination state
+  const [clubSearchQuery, setClubSearchQuery] = useState('');
+  const [chapterSearchQuery, setChapterSearchQuery] = useState('');
+  const [clubNextToken, setClubNextToken] = useState<string | null>(null);
+  const [chapterNextToken, setChapterNextToken] = useState<string | null>(null);
+  const [isLoadingMoreClubs, setIsLoadingMoreClubs] = useState(false);
+  const [isLoadingMoreChapters, setIsLoadingMoreChapters] = useState(false);
+
   const resetForm = () => {
     setShopName('');
     setShopDescription('');
@@ -56,6 +101,248 @@ export default function CreateShopModal({
     setWebsite('');
     setSelectedServices(new Set());
     setAdminNotes('');
+    setSelectedClubIds([]);
+    setSelectedChapterIds([]);
+    setClubAssociations({});
+    setChapterAssociations({});
+    setClubSearchQuery('');
+    setChapterSearchQuery('');
+    setClubNextToken(null);
+    setChapterNextToken(null);
+  };
+
+  // Fetch clubs and chapters when modal opens
+  useEffect(() => {
+    if (open) {
+      fetchClubs('', false);
+      fetchChapters('', false);
+    }
+  }, [open]);
+
+  // Debounced search for clubs
+  useEffect(() => {
+    if (!open) return;
+    
+    const timer = setTimeout(() => {
+      fetchClubs(clubSearchQuery, false);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [clubSearchQuery, open]);
+
+  // Debounced search for chapters
+  useEffect(() => {
+    if (!open) return;
+    
+    const timer = setTimeout(() => {
+      fetchChapters(chapterSearchQuery, false);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [chapterSearchQuery, open]);
+
+  const fetchClubs = async (searchQuery: string, append: boolean) => {
+    if (append) {
+      setIsLoadingMoreClubs(true);
+    } else {
+      setLoadingClubs(true);
+    }
+    
+    try {
+      const client = generateClient<Schema>();
+      const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
+      
+      // Build filter
+      const filters: Array<Record<string, unknown>> = [{ approved: { eq: true } }];
+      
+      if (searchQuery.trim()) {
+        filters.push({
+          or: [
+            { name: { contains: searchQuery.trim() } },
+            { description: { contains: searchQuery.trim() } }
+          ]
+        });
+      }
+      
+      const filter = filters.length > 1 ? { and: filters } : filters[0];
+      
+      const response = await client.models.Club.list({
+        selectionSet: ['id', 'name', 'description', 'approved'],
+        authMode,
+        filter,
+        limit: 50,
+        nextToken: append ? clubNextToken : undefined,
+      });
+      
+      if (response.data) {
+        const formattedClubs = response.data.map((club) => ({
+          id: club.id,
+          name: club.name,
+          description: club.description,
+          approved: true,
+        }));
+        
+        if (append) {
+          setClubs((prev) => [...prev, ...formattedClubs]);
+        } else {
+          setClubs(formattedClubs);
+        }
+        
+        setClubNextToken(response.nextToken || null);
+      }
+    } catch (error) {
+      console.error('Error fetching clubs:', error);
+      if (!append) {
+        toast.error('Failed to load clubs');
+      }
+    } finally {
+      setLoadingClubs(false);
+      setIsLoadingMoreClubs(false);
+    }
+  };
+
+  const fetchChapters = async (searchQuery: string, append: boolean) => {
+    if (append) {
+      setIsLoadingMoreChapters(true);
+    } else {
+      setLoadingChapters(true);
+    }
+    
+    try {
+      const client = generateClient<Schema>();
+      const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
+      
+      // Only filter by approved status in the GraphQL query
+      // We'll do client-side filtering for search to include club name
+      const filter = { approved: { eq: true } };
+      
+      const response = await client.models.ClubChapter.list({
+        selectionSet: ['id', 'name', 'description', 'clubId', 'approved', 'club.name'],
+        authMode,
+        filter,
+        limit: 50,
+        nextToken: append ? chapterNextToken : undefined,
+      });
+      
+      if (response.data) {
+        const formattedChapters = response.data.map((chapter) => ({
+          id: chapter.id,
+          name: chapter.name,
+          description: chapter.description,
+          clubName: chapter.club?.name || 'Unknown Club',
+          approved: true,
+        }));
+        
+        // Apply client-side filtering for search query
+        let filteredChapters = formattedChapters;
+        if (searchQuery.trim()) {
+          const query = searchQuery.trim().toLowerCase();
+          filteredChapters = formattedChapters.filter((chapter) => {
+            return (
+              chapter.name.toLowerCase().includes(query) ||
+              (chapter.description && chapter.description.toLowerCase().includes(query)) ||
+              chapter.clubName.toLowerCase().includes(query)
+            );
+          });
+        }
+        
+        if (append) {
+          setChapters((prev) => [...prev, ...filteredChapters]);
+        } else {
+          setChapters(filteredChapters);
+        }
+        
+        setChapterNextToken(response.nextToken || null);
+      }
+    } catch (error) {
+      console.error('Error fetching chapters:', error);
+      if (!append) {
+        toast.error('Failed to load chapters');
+      }
+    } finally {
+      setLoadingChapters(false);
+      setIsLoadingMoreChapters(false);
+    }
+  };
+
+  const handleLoadMoreClubs = () => {
+    if (clubNextToken && !isLoadingMoreClubs) {
+      fetchClubs(clubSearchQuery, true);
+    }
+  };
+
+  const handleLoadMoreChapters = () => {
+    if (chapterNextToken && !isLoadingMoreChapters) {
+      fetchChapters(chapterSearchQuery, true);
+    }
+  };
+
+  const handleClubToggle = (clubId: string) => {
+    setSelectedClubIds((prev) => {
+      const newSelected = prev.includes(clubId)
+        ? prev.filter((id) => id !== clubId)
+        : [...prev, clubId];
+      
+      // Initialize or remove associations
+      if (newSelected.includes(clubId) && !clubAssociations[clubId]) {
+        setClubAssociations((prevAssoc) => ({
+          ...prevAssoc,
+          [clubId]: { relationship: '', details: '' },
+        }));
+      } else if (!newSelected.includes(clubId)) {
+        setClubAssociations((prevAssoc) => {
+          const newAssoc = { ...prevAssoc };
+          delete newAssoc[clubId];
+          return newAssoc;
+        });
+      }
+      
+      return newSelected;
+    });
+  };
+
+  const handleChapterToggle = (chapterId: string) => {
+    setSelectedChapterIds((prev) => {
+      const newSelected = prev.includes(chapterId)
+        ? prev.filter((id) => id !== chapterId)
+        : [...prev, chapterId];
+      
+      // Initialize or remove associations
+      if (newSelected.includes(chapterId) && !chapterAssociations[chapterId]) {
+        setChapterAssociations((prevAssoc) => ({
+          ...prevAssoc,
+          [chapterId]: { relationship: '', details: '' },
+        }));
+      } else if (!newSelected.includes(chapterId)) {
+        setChapterAssociations((prevAssoc) => {
+          const newAssoc = { ...prevAssoc };
+          delete newAssoc[chapterId];
+          return newAssoc;
+        });
+      }
+      
+      return newSelected;
+    });
+  };
+
+  const updateClubAssociation = (clubId: string, field: 'relationship' | 'details', value: string) => {
+    setClubAssociations((prev) => ({
+      ...prev,
+      [clubId]: {
+        ...prev[clubId],
+        [field]: value,
+      },
+    }));
+  };
+
+  const updateChapterAssociation = (chapterId: string, field: 'relationship' | 'details', value: string) => {
+    setChapterAssociations((prev) => ({
+      ...prev,
+      [chapterId]: {
+        ...prev[chapterId],
+        [field]: value,
+      },
+    }));
   };
 
   // Helper function to format service labels
@@ -116,7 +403,7 @@ export default function CreateShopModal({
     try {
       const client = generateClient<Schema>();
       
-      // Prepare shop data
+      // Prepare shop data - matching pattern from CreateClubModal
       const shopData: {
         name: string;
         description?: string;
@@ -133,23 +420,19 @@ export default function CreateShopModal({
         notes: string;
       } = {
         name: shopName.trim(),
+        description: shopDescription.trim() || undefined,
+        address: address.trim() || undefined,
+        city: city.trim() || undefined,
+        state: state.trim() || undefined,
+        zipCode: zipCode.trim() || undefined,
         latitude,
         longitude,
+        phone: phone.trim() || undefined,
+        email: email.trim() || undefined,
+        website: website.trim() || undefined,
+        services: selectedServices.size > 0 ? Array.from(selectedServices) : undefined,
         notes: adminNotes.trim(),
       };
-
-      // Add optional fields if provided
-      if (shopDescription.trim()) shopData.description = shopDescription.trim();
-      if (address.trim()) shopData.address = address.trim();
-      if (city.trim()) shopData.city = city.trim();
-      if (state.trim()) shopData.state = state.trim();
-      if (zipCode.trim()) shopData.zipCode = zipCode.trim();
-      if (phone.trim()) shopData.phone = phone.trim();
-      if (email.trim()) shopData.email = email.trim();
-      if (website.trim()) shopData.website = website.trim();
-      if (selectedServices.size > 0) {
-        shopData.services = Array.from(selectedServices);
-      }
 
       // Create the shop in the database
       const { data: newShop, errors } = await client.models.Shop.create(
@@ -175,9 +458,86 @@ export default function CreateShopModal({
         return;
       }
 
-      // Show success message
+      // Create club associations if any are selected
+      const clubAssociationPromises = selectedClubIds.map(async (clubId) => {
+        const association = clubAssociations[clubId];
+        if (!association.relationship) {
+          console.warn(`Skipping club association for ${clubId} - no relationship type specified`);
+          return null;
+        }
+
+        try {
+          const { data, errors } = await client.models.ClubAssociation.create(
+            {
+              shopId: newShop.id,
+              clubId,
+              relationship: association.relationship,
+              details: association.details || undefined,
+              notes: `Association created during shop creation`,
+            },
+            { authMode: 'userPool' }
+          );
+
+          if (errors && errors.length > 0) {
+            console.error(`Error creating club association for ${clubId}:`, errors);
+            return null;
+          }
+
+          return data;
+        } catch (error) {
+          console.error(`Error creating club association for ${clubId}:`, error);
+          return null;
+        }
+      });
+
+      // Create chapter associations if any are selected
+      const chapterAssociationPromises = selectedChapterIds.map(async (chapterId) => {
+        const association = chapterAssociations[chapterId];
+        if (!association.relationship) {
+          console.warn(`Skipping chapter association for ${chapterId} - no relationship type specified`);
+          return null;
+        }
+
+        try {
+          const { data, errors } = await client.models.ChapterAssociation.create(
+            {
+              shopId: newShop.id,
+              chapterId,
+              relationship: association.relationship,
+              details: association.details || undefined,
+              notes: `Association created during shop creation`,
+            },
+            { authMode: 'userPool' }
+          );
+
+          if (errors && errors.length > 0) {
+            console.error(`Error creating chapter association for ${chapterId}:`, errors);
+            return null;
+          }
+
+          return data;
+        } catch (error) {
+          console.error(`Error creating chapter association for ${chapterId}:`, error);
+          return null;
+        }
+      });
+
+      // Wait for all associations to be created
+      const clubResults = await Promise.all(clubAssociationPromises);
+      const chapterResults = await Promise.all(chapterAssociationPromises);
+
+      const successfulClubAssociations = clubResults.filter((r) => r !== null).length;
+      const successfulChapterAssociations = chapterResults.filter((r) => r !== null).length;
+
+      // Show success message with association info
+      let description = 'Your shop is pending admin approval.';
+      if (successfulClubAssociations > 0 || successfulChapterAssociations > 0) {
+        description += ` ${successfulClubAssociations} club and ${successfulChapterAssociations} chapter associations were created and are also pending approval.`;
+      }
+
       toast.success('Shop created successfully!', {
-        description: 'Your shop is pending admin approval. You will be notified once it is approved.',
+        description,
+        duration: 5000,
       });
 
       onSuccess();
@@ -254,134 +614,238 @@ export default function CreateShopModal({
             />
           </div>
 
-          {/* Location Section */}
-          <div className="space-y-4">
-            <div>
-              <Label className="text-base font-semibold">Location *</Label>
-              <p className="text-xs text-muted-foreground mt-1 mb-2">
-                Click on the map to select your shop's location. Address details will be auto-filled.
-              </p>
-            </div>
-            
-            <LocationPickerMap onLocationSelect={handleLocationSelect} />
+          {/* Accordion for Location, Contact, Services and Associations */}
+          <Accordion type="multiple" className="w-full" defaultValue={["location"]}>
+            {/* Location */}
+            <AccordionItem value="location">
+              <AccordionTrigger>
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-semibold">Location *</span>
+                  {latitude !== null && longitude !== null && (
+                    <span className="text-sm text-muted-foreground">
+                      (Selected)
+                    </span>
+                  )}
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 pt-2">
+                  <p className="text-xs text-muted-foreground">
+                    Click on the map to select your shop's location. Address details will be auto-filled.
+                  </p>
+                  
+                  <LocationPickerMap onLocationSelect={handleLocationSelect} />
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="address">Street Address</Label>
-                <Input
-                  id="address"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="123 Main St"
-                />
-              </div>
-              <div>
-                <Label htmlFor="city">City</Label>
-                <Input
-                  id="city"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  placeholder="City"
-                />
-              </div>
-            </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="address">Street Address</Label>
+                      <Input
+                        id="address"
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        placeholder="123 Main St"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="city">City</Label>
+                      <Input
+                        id="city"
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        placeholder="City"
+                      />
+                    </div>
+                  </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="state">State</Label>
-                <Input
-                  id="state"
-                  value={state}
-                  onChange={(e) => setState(e.target.value)}
-                  placeholder="State"
-                />
-              </div>
-              <div>
-                <Label htmlFor="zipCode">Zip Code</Label>
-                <Input
-                  id="zipCode"
-                  value={zipCode}
-                  onChange={(e) => setZipCode(e.target.value)}
-                  placeholder="12345"
-                />
-              </div>
-            </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="state">State</Label>
+                      <Input
+                        id="state"
+                        value={state}
+                        onChange={(e) => setState(e.target.value)}
+                        placeholder="State"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="zipCode">Zip Code</Label>
+                      <Input
+                        id="zipCode"
+                        value={zipCode}
+                        onChange={(e) => setZipCode(e.target.value)}
+                        placeholder="12345"
+                      />
+                    </div>
+                  </div>
 
-            {latitude !== null && longitude !== null && (
-              <div className="text-xs text-muted-foreground">
-                Coordinates: {latitude.toFixed(6)}, {longitude.toFixed(6)}
-              </div>
-            )}
-          </div>
+                  {latitude !== null && longitude !== null && (
+                    <div className="text-xs text-muted-foreground">
+                      Coordinates: {latitude.toFixed(6)}, {longitude.toFixed(6)}
+                    </div>
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
 
-          {/* Contact Information */}
-          <div className="space-y-4">
-            <Label className="text-base font-semibold">Contact Information</Label>
-            
-            <div>
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="(555) 123-4567"
-              />
-            </div>
+            {/* Contact Information */}
+            <AccordionItem value="contact">
+              <AccordionTrigger>
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-semibold">Contact Information</span>
+                  <span className="text-sm text-muted-foreground">(Optional)</span>
+                  {(phone || email || website) && (
+                    <span className="text-sm text-muted-foreground">
+                      - {[phone, email, website].filter(Boolean).length} filled
+                    </span>
+                  )}
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 pt-2">
+                  <div>
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="(555) 123-4567"
+                    />
+                  </div>
 
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="shop@example.com"
-              />
-            </div>
+                  <div>
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="shop@example.com"
+                    />
+                  </div>
 
-            <div>
-              <Label htmlFor="website">Website</Label>
-              <Input
-                id="website"
-                type="url"
-                value={website}
-                onChange={(e) => setWebsite(e.target.value)}
-                placeholder="https://example.com"
-              />
-            </div>
-          </div>
-
-          {/* Services */}
-          <div className="space-y-4">
-            <Label className="text-base font-semibold">Services Offered</Label>
-            <p className="text-xs text-muted-foreground">
-              Select all services that your shop provides
-            </p>
-            
-            <div className="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto p-2 border border-border rounded-md">
-              {SHOP_SERVICE_VALUES.map((service) => (
-                <div key={service} className="flex items-start space-x-2">
-                  <Checkbox
-                    id={`service-${service}`}
-                    checked={selectedServices.has(service)}
-                    onCheckedChange={() => handleServiceToggle(service)}
-                  />
-                  <div className="grid gap-1.5 leading-none">
-                    <label
-                      htmlFor={`service-${service}`}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                    >
-                      {formatServiceLabel(service)}
-                    </label>
-                    <p className="text-xs text-muted-foreground">
-                      {SHOP_SERVICE_DESCRIPTIONS[service]}
-                    </p>
+                  <div>
+                    <Label htmlFor="website">Website</Label>
+                    <Input
+                      id="website"
+                      type="url"
+                      value={website}
+                      onChange={(e) => setWebsite(e.target.value)}
+                      placeholder="https://example.com"
+                    />
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Services */}
+            <AccordionItem value="services">
+              <AccordionTrigger>
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-semibold">Services Offered</span>
+                  {selectedServices.size > 0 && (
+                    <span className="text-sm text-muted-foreground">
+                      ({selectedServices.size} selected)
+                    </span>
+                  )}
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-4 pt-2">
+                  <p className="text-xs text-muted-foreground">
+                    Select all services that your shop provides
+                  </p>
+                  
+                  <div className="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto p-2 border border-border rounded-md">
+                    {SHOP_SERVICE_VALUES.map((service) => (
+                      <div key={service} className="flex items-start space-x-2">
+                        <Checkbox
+                          id={`create-shop-service-${service}`}
+                          checked={selectedServices.has(service)}
+                          onCheckedChange={() => handleServiceToggle(service)}
+                        />
+                        <div className="grid gap-1.5 leading-none">
+                          <label
+                            htmlFor={`create-shop-service-${service}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            {formatServiceLabel(service)}
+                          </label>
+                          <p className="text-xs text-muted-foreground">
+                            {SHOP_SERVICE_DESCRIPTIONS[service]}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Club Associations */}
+            <AccordionItem value="clubs">
+              <AccordionTrigger>
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-semibold">Club Associations</span>
+                  <span className="text-sm text-muted-foreground">(Optional)</span>
+                  {selectedClubIds.length > 0 && (
+                    <span className="text-sm text-muted-foreground">
+                      - {selectedClubIds.length} selected
+                    </span>
+                  )}
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="pt-2">
+                  <ClubAssociationSelector
+                    clubs={clubs}
+                    selectedClubIds={selectedClubIds}
+                    clubAssociations={clubAssociations}
+                    onClubToggle={handleClubToggle}
+                    onUpdateAssociation={updateClubAssociation}
+                    searchQuery={clubSearchQuery}
+                    onSearchChange={setClubSearchQuery}
+                    isLoading={loadingClubs}
+                    hasMore={clubNextToken !== null}
+                    onLoadMore={handleLoadMoreClubs}
+                    isLoadingMore={isLoadingMoreClubs}
+                  />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Chapter Associations */}
+            <AccordionItem value="chapters">
+              <AccordionTrigger>
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-semibold">Chapter Associations</span>
+                  <span className="text-sm text-muted-foreground">(Optional)</span>
+                  {selectedChapterIds.length > 0 && (
+                    <span className="text-sm text-muted-foreground">
+                      - {selectedChapterIds.length} selected
+                    </span>
+                  )}
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="pt-2">
+                  <ChapterAssociationSelector
+                    chapters={chapters}
+                    selectedChapterIds={selectedChapterIds}
+                    chapterAssociations={chapterAssociations}
+                    onChapterToggle={handleChapterToggle}
+                    onUpdateAssociation={updateChapterAssociation}
+                    searchQuery={chapterSearchQuery}
+                    onSearchChange={setChapterSearchQuery}
+                    isLoading={loadingChapters}
+                    hasMore={chapterNextToken !== null}
+                    onLoadMore={handleLoadMoreChapters}
+                    isLoadingMore={isLoadingMoreChapters}
+                  />
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
 
           {/* Admin Notes */}
           <div>

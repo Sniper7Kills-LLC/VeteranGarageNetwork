@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import ContentWithSidebar from '@/components/layouts/ContentWithSidebar';
-import Map from '@/components/Map';
+import Map, { type MapBounds } from '@/components/Map';
 import ShopModal from '@/components/ShopModal';
 import CreateShopModal from '@/components/CreateShopModal';
 import ClubFilter from '@/components/filters/ClubFilter';
@@ -21,6 +21,9 @@ import type { Schema } from "@/../amplify/data/resource";
 
 // Import shop services from centralized config
 import { SHOP_SERVICE_VALUES, SHOP_SERVICE_DESCRIPTIONS } from '@/../amplify/config/enums';
+
+// Special ID for shops with no club affiliation
+const NO_AFFILIATION_ID = '__no_affiliation__';
 
 // Type definitions
 interface Club {
@@ -55,224 +58,21 @@ interface Shop {
   clubAssociations: ClubAssociation[];
 }
 
-// Mock data for shops with club associations (will be replaced with database data in the future)
-const mockShops: Shop[] = [
-  {
-    id: 'cc-sd-shop',
-    name: 'Combat Customs Garage - San Diego',
-    description: 'Official Combat Customs shop specializing in custom builds',
-    address: '1234 Custom Ave',
-    city: 'San Diego',
-    state: 'CA',
-    zipCode: '92101',
-    latitude: 32.7157,
-    longitude: -117.1611,
-    phone: '(619) 555-1000',
-    email: 'shop@combatcustoms.com',
-    website: 'https://combatcustoms.com',
-    services: ['Custom Builds', 'Repairs', 'Fabrication', 'Paint & Body'],
-    clubAssociations: [
-      {
-        id: 'cc-sd-shop-1',
-        clubId: 'combat-customs',
-        clubName: 'Combat Customs',
-        relationship: 'Official Club Shop',
-        details: 'Primary shop for all Combat Customs San Diego chapter members',
-      },
-    ],
-  },
-  {
-    id: 'cc-la-shop',
-    name: 'Combat Customs Garage - Los Angeles',
-    description: 'LA-based custom motorcycle and car shop',
-    address: '5678 Sunset Blvd',
-    city: 'Los Angeles',
-    state: 'CA',
-    zipCode: '90028',
-    latitude: 34.0522,
-    longitude: -118.2437,
-    phone: '(213) 555-2000',
-    email: 'la@combatcustoms.com',
-    website: 'https://combatcustoms.com/la',
-    services: ['Custom Builds', 'Performance Tuning', 'Restoration', 'Welding'],
-    clubAssociations: [
-      {
-        id: 'cc-la-shop-1',
-        clubId: 'combat-customs',
-        clubName: 'Combat Customs',
-        relationship: 'Official Club Shop',
-        details: 'Headquarters for Combat Customs LA chapter',
-      },
-    ],
-  },
-  {
-    id: 'hog-denver-dealer',
-    name: 'Mile High Harley-Davidson',
-    description: 'Official Harley-Davidson dealership',
-    address: '2468 Harley Way',
-    city: 'Denver',
-    state: 'CO',
-    zipCode: '80202',
-    latitude: 39.7392,
-    longitude: -104.9903,
-    phone: '(303) 555-3000',
-    email: 'info@milehighhd.com',
-    website: 'https://milehighhd.com',
-    services: ['Sales', 'Service', 'Parts', 'Financing', 'Accessories'],
-    clubAssociations: [
-      {
-        id: 'hog-denver-dealer-1',
-        clubId: 'hog',
-        clubName: 'HOG (Harley Owners Group)',
-        relationship: 'Official HOG Dealership',
-        details: 'Sponsoring dealership for Mile High HOG chapter',
-      },
-    ],
-  },
-  {
-    id: 'hog-seattle-dealer',
-    name: 'Emerald City Harley-Davidson',
-    description: 'Seattle area Harley-Davidson dealership',
-    address: '1357 Pike St',
-    city: 'Seattle',
-    state: 'WA',
-    zipCode: '98101',
-    latitude: 47.6062,
-    longitude: -122.3321,
-    phone: '(206) 555-4000',
-    email: 'info@emeraldcityhd.com',
-    website: 'https://emeraldcityhd.com',
-    services: ['Sales', 'Service', 'Parts', 'Customization', 'Apparel'],
-    clubAssociations: [
-      {
-        id: 'hog-seattle-dealer-1',
-        clubId: 'hog',
-        clubName: 'HOG (Harley Owners Group)',
-        relationship: 'Official HOG Dealership',
-        details: 'Home dealership for Emerald City HOG chapter',
-      },
-    ],
-  },
-  {
-    id: 'austin-performance',
-    name: 'Austin Performance Garage',
-    description: 'Full-service performance and custom shop',
-    address: '910 Congress Ave',
-    city: 'Austin',
-    state: 'TX',
-    zipCode: '78701',
-    latitude: 30.2672,
-    longitude: -97.7431,
-    phone: '(512) 555-5000',
-    email: 'info@austinperformance.com',
-    website: 'https://austinperformance.com',
-    services: ['Performance Tuning', 'Custom Builds', 'Repairs', 'Dyno Testing'],
-    clubAssociations: [
-      {
-        id: 'austin-perf-1',
-        clubId: 'final-call',
-        clubName: 'Final Call',
-        relationship: 'Preferred Vendor',
-        details: '15% discount for Final Call members on labor',
-      },
-      {
-        id: 'austin-perf-2',
-        clubId: 'veterans-garage',
-        clubName: 'Veterans Garage',
-        relationship: 'Partner Shop',
-        details: 'Provides workspace and tools for Veterans Garage events',
-      },
-    ],
-  },
-  {
-    id: 'phoenix-classic',
-    name: 'Phoenix Classic Restorations',
-    description: 'Specializing in classic car and motorcycle restoration',
-    address: '3690 E Van Buren St',
-    city: 'Phoenix',
-    state: 'AZ',
-    zipCode: '85008',
-    latitude: 33.4484,
-    longitude: -112.0740,
-    phone: '(602) 555-6000',
-    email: 'info@phoenixclassic.com',
-    website: 'https://phoenixclassic.com',
-    services: ['Restoration', 'Paint & Body', 'Upholstery', 'Engine Rebuilds'],
-    clubAssociations: [
-      {
-        id: 'phoenix-classic-1',
-        clubId: 'veterans-garage',
-        clubName: 'Veterans Garage',
-        relationship: 'Partner Shop',
-        details: 'Hosts monthly Veterans Garage meetups and provides mentorship',
-      },
-    ],
-  },
-  {
-    id: 'miami-motors',
-    name: 'Miami Motors & Customs',
-    description: 'Custom motorcycle and automotive shop',
-    address: '7890 Ocean Dr',
-    city: 'Miami',
-    state: 'FL',
-    zipCode: '33139',
-    latitude: 25.7617,
-    longitude: -80.1918,
-    phone: '(305) 555-7000',
-    email: 'info@miamimotors.com',
-    website: 'https://miamimotors.com',
-    services: ['Custom Builds', 'Repairs', 'Performance Parts', 'Detailing'],
-    clubAssociations: [
-      {
-        id: 'miami-motors-1',
-        clubId: 'veterans-garage',
-        clubName: 'Veterans Garage',
-        relationship: 'Official Shop',
-        details: 'Primary location for Veterans Garage Miami chapter activities',
-      },
-      {
-        id: 'miami-motors-2',
-        clubId: 'combat-customs',
-        clubName: 'Combat Customs',
-        relationship: 'Preferred Vendor',
-        details: '10% discount on parts for Combat Customs members',
-      },
-    ],
-  },
-  {
-    id: 'dallas-speed',
-    name: 'Dallas Speed & Custom',
-    description: 'High-performance builds and racing preparation',
-    address: '4521 Commerce St',
-    city: 'Dallas',
-    state: 'TX',
-    zipCode: '75226',
-    latitude: 32.7767,
-    longitude: -96.7970,
-    phone: '(214) 555-8000',
-    email: 'info@dallasspeed.com',
-    website: 'https://dallasspeed.com',
-    services: ['Performance Builds', 'Racing Prep', 'Dyno Tuning', 'Fabrication'],
-    clubAssociations: [
-      {
-        id: 'dallas-speed-1',
-        clubId: 'final-call',
-        clubName: 'Final Call',
-        relationship: 'Preferred Vendor',
-        details: 'Discounted rates for Final Call Dallas chapter members',
-      },
-    ],
-  },
-];
-
 export default function Shops() {
   const { authStatus } = useAuthenticator((context) => [context.authStatus]);
   const [clubs, setClubs] = useState<Club[]>([]);
+  const [shops, setShops] = useState<Shop[]>([]);
   const [selectedClubIds, setSelectedClubIds] = useState<Set<string>>(new Set());
   const [selectedServices, setSelectedServices] = useState<Set<string>>(new Set(SHOP_SERVICE_VALUES));
   const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreateShopModalOpen, setIsCreateShopModalOpen] = useState(false);
+  const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
+  const [shopNextToken, setShopNextToken] = useState<string | null>(null);
+  const [isLoadingMoreShops, setIsLoadingMoreShops] = useState(false);
+  const [totalShops, setTotalShops] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [clubSearchQuery, setClubSearchQuery] = useState('');
 
   // Fetch clubs from database
   useEffect(() => {
@@ -288,9 +88,11 @@ export default function Shops() {
         });
         
         setClubs(clubsData || []);
-        // Initialize all clubs as selected
+        // Initialize all clubs as selected, including "No Affiliation"
         if (clubsData && clubsData.length > 0) {
-          setSelectedClubIds(new Set(clubsData.map(club => club.id)));
+          setSelectedClubIds(new Set([...clubsData.map(club => club.id), NO_AFFILIATION_ID]));
+        } else {
+          setSelectedClubIds(new Set([NO_AFFILIATION_ID]));
         }
       } catch (error) {
         console.error('Error fetching clubs:', error);
@@ -300,6 +102,214 @@ export default function Shops() {
     
     fetchClubs();
   }, [authStatus]);
+
+  // Fetch shops from database based on map bounds
+  useEffect(() => {
+    const fetchShops = async () => {
+      try {
+        setIsLoading(true);
+        const client = generateClient<Schema>();
+        const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
+        
+        // Build shop filter based on map bounds
+        const filters: Array<Record<string, unknown>> = [{ approved: { eq: true } }];
+        
+        // Add geographic bounds filter if available
+        if (mapBounds) {
+          filters.push({
+            latitude: { 
+              between: [mapBounds.southWest.lat, mapBounds.northEast.lat]
+            }
+          });
+          filters.push({
+            longitude: { 
+              between: [mapBounds.southWest.lng, mapBounds.northEast.lng]
+            }
+          });
+        }
+        
+        // Combine all filters with AND logic
+        const shopFilter = filters.length > 1 ? { and: filters } : filters[0];
+        
+        const { data: shopsData, nextToken } = await client.models.Shop.list({
+          selectionSet: [
+            'id',
+            'name',
+            'description',
+            'address',
+            'city',
+            'state',
+            'zipCode',
+            'latitude',
+            'longitude',
+            'phone',
+            'email',
+            'website',
+            'services',
+            'clubAssociations.id',
+            'clubAssociations.clubId',
+            'clubAssociations.relationship',
+            'clubAssociations.details',
+            'clubAssociations.club.id',
+            'clubAssociations.club.name',
+          ],
+          authMode,
+          filter: shopFilter,
+          limit: 1000,
+        });
+        
+        // Transform the data to match our Shop interface
+        const transformedShops: Shop[] = (shopsData || []).map(shop => ({
+          id: shop.id,
+          name: shop.name,
+          description: shop.description || undefined,
+          address: shop.address || undefined,
+          city: shop.city || undefined,
+          state: shop.state || undefined,
+          zipCode: shop.zipCode || undefined,
+          latitude: shop.latitude,
+          longitude: shop.longitude,
+          phone: shop.phone || undefined,
+          email: shop.email || undefined,
+          website: shop.website || undefined,
+          services: shop.services?.filter((s): s is string => s !== null) || undefined,
+          clubAssociations: (shop.clubAssociations || [])
+            .filter(assoc => assoc.club) // Only include associations with valid club data
+            .map(assoc => ({
+              id: assoc.id,
+              clubId: assoc.clubId,
+              clubName: assoc.club?.name || 'Unknown Club',
+              relationship: assoc.relationship,
+              details: assoc.details || undefined,
+            })),
+        }));
+        
+        setShops(transformedShops);
+        setShopNextToken(nextToken || null);
+        
+        // Fetch total count (without pagination)
+        const countResponse = await client.models.Shop.list({
+          selectionSet: ['id'],
+          authMode,
+          filter: shopFilter,
+        });
+        setTotalShops(countResponse.data?.length || 0);
+      } catch (error) {
+        console.error('Error fetching shops:', error);
+        setShops([]);
+        setShopNextToken(null);
+        setTotalShops(0);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    // Only fetch if we have map bounds
+    if (mapBounds) {
+      fetchShops();
+    } else {
+      setIsLoading(false);
+    }
+  }, [authStatus, mapBounds]);
+
+  // Load more shops handler
+  const handleLoadMoreShops = async () => {
+    if (!shopNextToken || isLoadingMoreShops) return;
+    
+    try {
+      setIsLoadingMoreShops(true);
+      const client = generateClient<Schema>();
+      const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
+      
+      // Build shop filter based on map bounds
+      const filters: Array<Record<string, unknown>> = [{ approved: { eq: true } }];
+      
+      // Add geographic bounds filter if available
+      if (mapBounds) {
+        filters.push({
+          latitude: { 
+            between: [mapBounds.southWest.lat, mapBounds.northEast.lat]
+          }
+        });
+        filters.push({
+          longitude: { 
+            between: [mapBounds.southWest.lng, mapBounds.northEast.lng]
+          }
+        });
+      }
+      
+      // Combine all filters with AND logic
+      const shopFilter = filters.length > 1 ? { and: filters } : filters[0];
+      
+      // Fetch next page
+      const response = await client.models.Shop.list({
+        selectionSet: [
+          'id',
+          'name',
+          'description',
+          'address',
+          'city',
+          'state',
+          'zipCode',
+          'latitude',
+          'longitude',
+          'phone',
+          'email',
+          'website',
+          'services',
+          'clubAssociations.id',
+          'clubAssociations.clubId',
+          'clubAssociations.relationship',
+          'clubAssociations.details',
+          'clubAssociations.club.id',
+          'clubAssociations.club.name',
+        ],
+        authMode,
+        filter: shopFilter,
+        limit: 1000,
+        nextToken: shopNextToken,
+      });
+      
+      // Transform and append new shops to existing list
+      const newShops = (response.data || []).map(shop => ({
+        id: shop.id,
+        name: shop.name,
+        description: shop.description || undefined,
+        address: shop.address || undefined,
+        city: shop.city || undefined,
+        state: shop.state || undefined,
+        zipCode: shop.zipCode || undefined,
+        latitude: shop.latitude,
+        longitude: shop.longitude,
+        phone: shop.phone || undefined,
+        email: shop.email || undefined,
+        website: shop.website || undefined,
+        services: shop.services?.filter((s): s is string => s !== null) || undefined,
+        clubAssociations: (shop.clubAssociations || [])
+          .filter(assoc => assoc.club)
+          .map(assoc => ({
+            id: assoc.id,
+            clubId: assoc.clubId,
+            clubName: assoc.club?.name || 'Unknown Club',
+            relationship: assoc.relationship,
+            details: assoc.details || undefined,
+          })),
+      }));
+      
+      setShops(prev => [...prev, ...newShops]);
+      
+      // Only set nextToken if we actually got data
+      setShopNextToken(newShops.length > 0 ? (response.nextToken || null) : null);
+    } catch (error) {
+      console.error('Error loading more shops:', error);
+    } finally {
+      setIsLoadingMoreShops(false);
+    }
+  };
+
+  const handleBoundsChange = useCallback((bounds: MapBounds) => {
+    setMapBounds(bounds);
+  }, []);
 
   const handleClubToggle = (clubId: string) => {
     setSelectedClubIds((prev) => {
@@ -325,12 +335,29 @@ export default function Shops() {
     });
   };
 
-  const filteredShops = useMemo(() => {
-    return mockShops.filter((shop) => {
-      // Filter by club associations
-      const matchesClub = shop.clubAssociations.some((association) =>
-        selectedClubIds.has(association.clubId)
+  // Filter clubs based on search query
+  const filteredClubs = useMemo(() => {
+    if (!clubSearchQuery.trim()) {
+      return clubs;
+    }
+    
+    const query = clubSearchQuery.trim();
+    return clubs.filter((club) => {
+      return (
+        club.name.includes(query) ||
+        (club.description && club.description.includes(query))
       );
+    });
+  }, [clubs, clubSearchQuery]);
+
+  const filteredShops = useMemo(() => {
+    return shops.filter((shop) => {
+      // Filter by club associations
+      const matchesClub = shop.clubAssociations.length === 0
+        ? selectedClubIds.has(NO_AFFILIATION_ID) // Unaffiliated shops only show if explicitly selected
+        : shop.clubAssociations.some((association) =>
+            selectedClubIds.has(association.clubId)
+          );
       
       // Filter by services (if shop has any of the selected services)
       const matchesService = selectedServices.size === 0 || 
@@ -342,7 +369,7 @@ export default function Shops() {
       
       return matchesClub && matchesService;
     });
-  }, [selectedClubIds, selectedServices]);
+  }, [shops, selectedClubIds, selectedServices]);
 
   const mapLocations = useMemo(() => {
     return filteredShops.map((shop) => ({
@@ -361,12 +388,74 @@ export default function Shops() {
   };
 
   const selectedShop = useMemo(() => {
-    return mockShops.find((shop) => shop.id === selectedShopId) || null;
-  }, [selectedShopId]);
+    return shops.find((shop) => shop.id === selectedShopId) || null;
+  }, [shops, selectedShopId]);
 
   const handleCreateShopSuccess = () => {
-    // Shop creation successful - no need to refetch since shops need approval
-    // The shop won't appear until an admin approves it
+    // Shop creation successful - refetch shops to show the new shop if approved
+    const fetchShops = async () => {
+      try {
+        const client = generateClient<Schema>();
+        const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
+        
+        const { data: shopsData } = await client.models.Shop.list({
+          selectionSet: [
+            'id',
+            'name',
+            'description',
+            'address',
+            'city',
+            'state',
+            'zipCode',
+            'latitude',
+            'longitude',
+            'phone',
+            'email',
+            'website',
+            'services',
+            'clubAssociations.id',
+            'clubAssociations.clubId',
+            'clubAssociations.relationship',
+            'clubAssociations.details',
+            'clubAssociations.club.id',
+            'clubAssociations.club.name',
+          ],
+          authMode,
+          filter: { approved: { eq: true } }
+        });
+        
+        const transformedShops: Shop[] = (shopsData || []).map(shop => ({
+          id: shop.id,
+          name: shop.name,
+          description: shop.description || undefined,
+          address: shop.address || undefined,
+          city: shop.city || undefined,
+          state: shop.state || undefined,
+          zipCode: shop.zipCode || undefined,
+          latitude: shop.latitude,
+          longitude: shop.longitude,
+          phone: shop.phone || undefined,
+          email: shop.email || undefined,
+          website: shop.website || undefined,
+          services: shop.services?.filter((s): s is string => s !== null) || undefined,
+          clubAssociations: (shop.clubAssociations || [])
+            .filter(assoc => assoc.club)
+            .map(assoc => ({
+              id: assoc.id,
+              clubId: assoc.clubId,
+              clubName: assoc.club?.name || 'Unknown Club',
+              relationship: assoc.relationship,
+              details: assoc.details || undefined,
+            })),
+        }));
+        
+        setShops(transformedShops);
+      } catch (error) {
+        console.error('Error fetching shops:', error);
+      }
+    };
+    
+    fetchShops();
   };
 
   const isAuthenticated = authStatus === 'authenticated';
@@ -389,8 +478,13 @@ export default function Shops() {
           />
           
           <ClubFilter
-            clubs={clubs}
+            clubs={[
+              { id: NO_AFFILIATION_ID, name: 'No Affiliation', type: null, description: 'Shops with no club associations' },
+              ...filteredClubs
+            ]}
             showSearch={true}
+            searchQuery={clubSearchQuery}
+            onSearchChange={setClubSearchQuery}
             selectedClubIds={selectedClubIds}
             onClubToggle={handleClubToggle}
             clubFilterTitle="Filter by Club Association"
@@ -408,10 +502,34 @@ export default function Shops() {
           </p>
         </div>
 
-        <Map locations={mapLocations} onMarkerClick={handleMarkerClick} />
+        <Map 
+          locations={mapLocations} 
+          onMarkerClick={handleMarkerClick}
+          onBoundsChange={handleBoundsChange}
+        />
 
-        <div className="text-sm text-muted-foreground">
-          Showing {filteredShops.length} shop{filteredShops.length !== 1 ? 's' : ''}
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
+            {isLoading ? (
+              'Loading shops...'
+            ) : (
+              <>
+                Showing {filteredShops.length} of {totalShops} shop
+                {totalShops !== 1 ? 's' : ''}
+              </>
+            )}
+          </div>
+          
+          {shopNextToken && !isLoading && (
+            <Button
+              onClick={handleLoadMoreShops}
+              disabled={isLoadingMoreShops}
+              variant="outline"
+              size="sm"
+            >
+              {isLoadingMoreShops ? 'Loading...' : 'Load More Shops'}
+            </Button>
+          )}
         </div>
       </div>
 
