@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { Info } from 'lucide-react';
 import ContentWithSidebar from '@/components/layouts/ContentWithSidebar';
 import Calendar from '@/components/Calendar';
 import EventModal from '@/components/EventModal';
 import DayEventsModal from '@/components/DayEventsModal';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface Event {
   id: string;
@@ -277,6 +279,13 @@ export default function Events() {
         }
       >
         <div className="space-y-6">
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              All events shown on this page are demo data and will be implemented shortly.
+            </AlertDescription>
+          </Alert>
+
           <div>
             <h1 className="text-3xl font-bold mb-2">Find an Event</h1>
             <p className="text-muted-foreground">

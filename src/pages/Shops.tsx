@@ -3,8 +3,10 @@ import { useAuthenticator } from '@aws-amplify/ui-react';
 import ContentWithSidebar from '@/components/layouts/ContentWithSidebar';
 import Map from '@/components/Map';
 import ShopModal from '@/components/ShopModal';
+import CreateShopModal from '@/components/CreateShopModal';
 import ClubFilter from '@/components/filters/ClubFilter';
 import ShopServiceFilter from '@/components/filters/ShopServiceFilter';
+import { Button } from '@/components/ui/button';
 
 /**
  * AWS Amplify Start
@@ -270,6 +272,7 @@ export default function Shops() {
   const [selectedServices, setSelectedServices] = useState<Set<string>>(new Set(SHOP_SERVICE_VALUES));
   const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreateShopModalOpen, setIsCreateShopModalOpen] = useState(false);
 
   // Fetch clubs from database
   useEffect(() => {
@@ -361,10 +364,23 @@ export default function Shops() {
     return mockShops.find((shop) => shop.id === selectedShopId) || null;
   }, [selectedShopId]);
 
+  const handleCreateShopSuccess = () => {
+    // Shop creation successful - no need to refetch since shops need approval
+    // The shop won't appear until an admin approves it
+  };
+
+  const isAuthenticated = authStatus === 'authenticated';
+
   return (
     <ContentWithSidebar
       sidebar={
         <div className="space-y-6">
+          {isAuthenticated && (
+            <Button onClick={() => setIsCreateShopModalOpen(true)} className="w-full">
+              Add Shop
+            </Button>
+          )}
+          
           <ShopServiceFilter
             services={SHOP_SERVICE_VALUES}
             selectedServices={selectedServices}
@@ -403,6 +419,12 @@ export default function Shops() {
         shop={selectedShop}
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
+      />
+
+      <CreateShopModal
+        open={isCreateShopModalOpen}
+        onOpenChange={setIsCreateShopModalOpen}
+        onSuccess={handleCreateShopSuccess}
       />
     </ContentWithSidebar>
   );

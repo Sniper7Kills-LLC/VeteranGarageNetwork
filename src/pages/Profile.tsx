@@ -1,26 +1,28 @@
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { useSearchParams, Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { generateClient } from 'aws-amplify/data';
+import { fetchAuthSession } from 'aws-amplify/auth';
+import type { Schema } from '@/amplify/data/resource';
 import ContentOnly from '@/components/layouts/ContentOnly';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
-// Mock data for user's owned entities
-const mockOwnedClubs = [
-  {
-    id: '1',
-    name: 'Combat Customs - San Diego',
-    type: 'Chapter',
-    description: 'San Diego chapter specializing in custom builds',
-    memberCount: 45,
-  },
-  {
-    id: '2',
-    name: 'Veterans Garage Network',
-    type: 'Club',
-    description: 'Main organization connecting veteran garage enthusiasts',
-    chapterCount: 12,
-  },
-];
+const client = generateClient<Schema>();
+
+type Club = Schema['Club']['type'];
+type ClubChapter = Schema['ClubChapter']['type'];
+
+interface CombinedClubItem {
+  id: string;
+  name: string;
+  type: 'Club' | 'Chapter';
+  description?: string | null;
+  approved: boolean;
+  memberCount?: number;
+  chapterCount?: number;
+  parentClubName?: string;
+}
 
 const mockOwnedProjects = [
   {
@@ -83,8 +85,105 @@ const mockOwnedShops = [
 export default function Profile() {
   const { authStatus } = useAuthenticator((context) => [context.authStatus]);
   const [searchParams] = useSearchParams();
+  const [ownedClubs, setOwnedClubs] = useState<CombinedClubItem[]>([]);
+  const [isLoadingClubs, setIsLoadingClubs] = useState(true);
+  const [clubsError, setClubsError] = useState<string | null>(null);
+  const [showDebug, setShowDebug] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<{ userId?: string; authStatus: string }>({ authStatus: 'unknown' });
 
   const isAuthenticated = authStatus === 'authenticated';
+
+  // Fetch user's owned clubs and chapters
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setIsLoadingClubs(false);
+      setDebugInfo({ authStatus: 'unauthenticated' });
+      return;
+    }
+
+    const fetchOwnedClubsAndChapters = async () => {
+      try {
+        setIsLoadingClubs(true);
+        setClubsError(null);
+        
+        // Get current user's identity
+        // NOTE: Using 'sub' from the ID token, which is the Cognito User Pool subject
+        // This matches what Amplify's allow.owner() authorization uses
+        const session = await fetchAuthSession();
+        const userId = session.tokens?.idToken?.payload.sub as string;
+
+        // Update debug info
+        setDebugInfo({
+          userId: userId || 'No user ID found',
+          authStatus: authStatus || 'unknown'
+        });
+
+        if (!userId) {
+          const errorMsg = 'No user ID (sub) found in session';
+          console.error(errorMsg);
+          setClubsError(errorMsg);
+          setIsLoadingClubs(false);
+          return;
+        }
+
+        // Fetch clubs owned by user
+        // NOTE: Using 'contains' filter to check if userId is in the owners array
+        // This supports multiple owners per club
+        const { data: clubs, errors: clubErrors } = await client.models.Club.list({
+          filter: { owners: { contains: userId } }
+        });
+
+        if (clubErrors && clubErrors.length > 0) {
+          console.error('Errors fetching clubs:', clubErrors);
+          setClubsError(`Error fetching clubs: ${clubErrors[0].message}`);
+        }
+
+        // Fetch chapters owned by user
+        // NOTE: Using 'contains' filter to check if userId is in the owners array
+        // This supports multiple owners per chapter
+        const { data: chapters, errors: chapterErrors } = await client.models.ClubChapter.list({
+          filter: { owners: { contains: userId } }
+        });
+
+        if (chapterErrors && chapterErrors.length > 0) {
+          console.error('Errors fetching chapters:', chapterErrors);
+          setClubsError(`Error fetching chapters: ${chapterErrors[0].message}`);
+        }
+
+        // Combine and format the data
+        const combinedClubs: CombinedClubItem[] = [
+          // Add clubs first
+          ...(clubs || []).map((club) => ({
+            id: club.id,
+            name: club.name,
+            type: 'Club' as const,
+            description: club.description,
+            approved: club.approved || false,
+            chapterCount: 0, // TODO: Could fetch chapter count if needed
+          })),
+          // Then add chapters
+          ...(chapters || []).map((chapter) => ({
+            id: chapter.id,
+            name: chapter.name,
+            type: 'Chapter' as const,
+            description: chapter.description,
+            approved: chapter.approved || false,
+            parentClubName: undefined, // TODO: Could fetch parent club name if needed
+          })),
+        ];
+
+        setOwnedClubs(combinedClubs);
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error occurred';
+        console.error('Error fetching owned clubs and chapters:', error);
+        setClubsError(errorMsg);
+      } finally {
+        setIsLoadingClubs(false);
+      }
+    };
+
+    fetchOwnedClubsAndChapters();
+  }, [isAuthenticated, authStatus]);
 
   // Parse OAuth error from URL parameters
   const oauthError = searchParams.get('error');
@@ -141,12 +240,66 @@ export default function Profile() {
     <ContentOnly>
       <div className="space-y-8">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold">My Profile</h1>
-          <p className="text-muted-foreground mt-2">
-            Manage your clubs, projects, and events
-          </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">My Profile</h1>
+            <p className="text-muted-foreground mt-2">
+              Manage your clubs, projects, and events
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowDebug(!showDebug)}
+          >
+            {showDebug ? 'Hide' : 'Show'} Debug Info
+          </Button>
         </div>
+
+        {/* Debug Info Card */}
+        {showDebug && (
+          <Card className="bg-muted/50">
+            <CardHeader>
+              <CardTitle className="text-lg">Debug Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="font-mono text-sm">
+                <p><strong>Auth Status:</strong> {debugInfo.authStatus}</p>
+                <p><strong>User ID:</strong> {debugInfo.userId || 'Not available'}</p>
+                <p><strong>Clubs Loaded:</strong> {ownedClubs.length}</p>
+                {clubsError && (
+                  <p className="text-destructive"><strong>Error:</strong> {clubsError}</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Error Alert */}
+        {clubsError && !showDebug && (
+          <Card className="border-destructive">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-3">
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-destructive mb-1">
+                    Error Loading Clubs & Chapters
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {clubsError}
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-3"
+                    onClick={() => window.location.reload()}
+                  >
+                    Retry
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Grid of cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -168,9 +321,14 @@ export default function Profile() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {mockOwnedClubs.length > 0 ? (
+              {isLoadingClubs ? (
+                <div className="text-center py-8">
+                  <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
+                  <p className="text-sm text-muted-foreground mt-2">Loading...</p>
+                </div>
+              ) : ownedClubs.length > 0 ? (
                 <>
-                  {mockOwnedClubs.map((club) => (
+                  {ownedClubs.map((club) => (
                     <div
                       key={club.id}
                       className="p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors"
@@ -179,17 +337,22 @@ export default function Profile() {
                         <div className="flex-1">
                           <h3 className="font-semibold text-sm">{club.name}</h3>
                           <p className="text-xs text-muted-foreground mt-1">
-                            {club.description}
+                            {club.description || 'No description provided'}
                           </p>
-                          <div className="flex items-center gap-2 mt-2">
+                          <div className="flex items-center gap-2 mt-2 flex-wrap">
                             <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
                               {club.type}
                             </span>
-                            <span className="text-xs text-muted-foreground">
-                              {'memberCount' in club
-                                ? `${club.memberCount} members`
-                                : `${club.chapterCount} chapters`}
-                            </span>
+                            {!club.approved && (
+                              <span className="text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 px-2 py-0.5 rounded">
+                                Under Review
+                              </span>
+                            )}
+                            {club.type === 'Club' && club.chapterCount !== undefined && (
+                              <span className="text-xs text-muted-foreground">
+                                {club.chapterCount} chapters
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>

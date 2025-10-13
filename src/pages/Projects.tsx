@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, Info } from 'lucide-react';
 import ContentWithSidebar from '@/components/layouts/ContentWithSidebar';
 import ProjectModal from '@/components/ProjectModal';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface Project {
   id: string;
@@ -300,6 +301,13 @@ export default function Projects() {
   return (
     <ContentWithSidebar sidebar={<ProjectsSidebar selectedFilter={selectedFilter} onFilterChange={setSelectedFilter} />}>
       <div className="space-y-6">
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            This section is planned for the future and will be last in development.
+          </AlertDescription>
+        </Alert>
+
         <div>
           <h1 className="text-3xl font-bold mb-2">Current Projects</h1>
           <p className="text-muted-foreground">

@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Search, Grid3x3, List, SlidersHorizontal } from 'lucide-react';
+import { Search, Grid3x3, List, SlidersHorizontal, Info } from 'lucide-react';
 import ContentWithSidebar from '@/components/layouts/ContentWithSidebar';
 import PartCard from '@/components/PartCard';
 import PartListItem from '@/components/PartListItem';
 import PartModal from '@/components/PartModal';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface Part {
   id: string;
@@ -531,6 +532,13 @@ export default function Parts() {
       }
     >
       <div className="space-y-6">
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            This section is planned for the future and will be last in development.
+          </AlertDescription>
+        </Alert>
+
         <div>
           <h1 className="text-3xl font-bold mb-2">Parts Marketplace</h1>
           <p className="text-muted-foreground">

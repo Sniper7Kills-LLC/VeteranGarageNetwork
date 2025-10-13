@@ -1,7 +1,9 @@
 import ContentOnly from '@/components/layouts/ContentOnly';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Link } from 'react-router-dom';
+import { AlertTriangle } from 'lucide-react';
 
 export default function Home() {
   // Placeholder statistics - can be replaced with API calls later
@@ -33,6 +35,13 @@ export default function Home() {
   return (
     <ContentOnly>
       <div className="space-y-16">
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            This site is under active development. Facebook login does not currently work.
+          </AlertDescription>
+        </Alert>
+
         {/* Hero Section */}
         <section className="text-center space-y-6 py-12">
           <h1 className="text-5xl font-bold tracking-tight">
