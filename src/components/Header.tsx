@@ -44,6 +44,11 @@ export default function Header() {
               <Link to="/events" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 Events
               </Link>
+              {isAuthenticated && (
+                <Link to="/profile" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  Profile
+                </Link>
+              )}
             </div>
           </div>
 

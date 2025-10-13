@@ -7,11 +7,54 @@ specifies that any unauthenticated user can "create", "read", "update",
 and "delete" any "Todo" records.
 =========================================================================*/
 const schema = a.schema({
-  Todo: a
+  Club: a
     .model({
-      content: a.string(),
+      name: a.string().required(),
+      description: a.string(),
+      clubType: a.string().array(),
+      approved: a.boolean().default(false),
+      owner: a.string(),
+      chapters: a.hasMany('ClubChapter', 'clubId'),
+      //shopAssociations: a.hasMany('ClubAssociation', 'clubId'),
     })
-    .authorization((allow) => [allow.guest()]),
+    .authorization((allow) => [
+      allow.guest().to(['read', 'list']),
+      allow.authenticated(),
+    ]),
+
+  ClubChapter: a
+    .model({
+      clubId: a.id().required(),
+      club: a.belongsTo('Club', 'clubId'),
+      clubName: a.string().required(),
+      name: a.string().required(),
+      description: a.string(),
+      address: a.string(),
+      city: a.string(),
+      state: a.string(),
+      zipCode: a.string(),
+      latitude: a.float().required(),
+      longitude: a.float().required(),
+      roles: a.hasMany('ChapterRole', 'chapterId'),
+    })
+    .authorization((allow) => [
+      allow.guest().to(['read', 'list']),
+      allow.authenticated(),
+    ]),
+
+  ChapterRole: a
+    .model({
+      chapterId: a.id().required(),
+      chapter: a.belongsTo('ClubChapter', 'chapterId'),
+      roleTitle: a.string().required(),
+      personName: a.string().required(),
+      email: a.email().authorization((allow)=> [allow.authenticated().to(['read'])]),
+      phone: a.phone().authorization((allow)=> [allow.authenticated().to(['read'])]),
+    })
+    .authorization((allow) => [
+      allow.guest().to(['read', 'list']),
+      allow.authenticated(),
+    ]),
 });
 
 export type Schema = ClientSchema<typeof schema>;

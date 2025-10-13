@@ -7,6 +7,12 @@ import RegisterChapterModal from '@/components/RegisterChapterModal';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 
+import { generateClient } from "aws-amplify/data";
+import type { Schema } from "@/amplify/data/resource";
+
+const client = generateClient<Schema>()
+const { data: clubs } = await client.models.Club.list()
+
 // Type definitions
 interface Club {
   id: string;
@@ -37,6 +43,8 @@ interface ClubChapter {
   longitude: number;
   roles: ChapterRole[];
 }
+
+
 
 // Mock data for clubs
 const mockClubs: Club[] = [
@@ -458,7 +466,7 @@ function ClubsSidebar({
 export default function Clubs() {
   const { authStatus } = useAuthenticator((context) => [context.authStatus]);
   const [selectedClubIds, setSelectedClubIds] = useState<Set<string>>(
-    new Set(mockClubs.map((club) => club.id))
+    new Set(clubs.map((club) => club.id))
   );
   const [selectedClubTypes, setSelectedClubTypes] = useState<Set<string>>(new Set());
   const [selectedChapterId, setSelectedChapterId] = useState<string | null>(
@@ -505,7 +513,7 @@ export default function Clubs() {
       }
 
       // Check if the club has any of the selected types
-      const club = mockClubs.find((c) => c.id === chapter.clubId);
+      const club = clubs.find((c) => c.id === chapter.clubId);
       if (!club || !club.clubType) {
         return false;
       }
@@ -545,7 +553,7 @@ export default function Clubs() {
     <ContentWithSidebar
       sidebar={
         <ClubsSidebar
-          clubs={mockClubs}
+          clubs={clubs}
           selectedClubIds={selectedClubIds}
           onClubToggle={handleClubToggle}
           selectedClubTypes={selectedClubTypes}
@@ -579,7 +587,7 @@ export default function Clubs() {
       />
 
       <RegisterChapterModal
-        clubs={mockClubs}
+        clubs={clubs}
         open={isRegisterModalOpen}
         onOpenChange={setIsRegisterModalOpen}
         onSuccess={handleRegisterSuccess}

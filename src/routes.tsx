@@ -35,6 +35,10 @@ export const router = createBrowserRouter([
         path: 'events',
         Component: lazy(() => import('./pages/Events')),
       },
+      {
+        path: 'profile',
+        Component: lazy(() => import('./pages/Profile')),
+      },
     ],
   },
 ]);
