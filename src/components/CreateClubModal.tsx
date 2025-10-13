@@ -88,7 +88,14 @@ export default function CreateClubModal({
 
       if (errors && errors.length > 0) {
         console.error('Club creation errors:', errors);
-        toast.error('Failed to create club. Please try again.');
+        console.error('Full errors object:', JSON.stringify(errors, null, 2));
+        
+        // Display detailed error messages from Amplify response
+        const errorMessages = errors.map((e) => e.message).join('\n');
+        toast.error('Failed to create club', {
+          description: errorMessages,
+          duration: 10000,
+        });
         return;
       }
 
@@ -113,9 +120,23 @@ export default function CreateClubModal({
       onOpenChange(false);
     } catch (error) {
       console.error('Error creating club:', error);
+      console.error('Full error object:', JSON.stringify(error, null, 2));
       
       // Handle specific error types
       if (error instanceof Error) {
+        // Check for GraphQL errors (these contain detailed authorization/validation errors)
+        const errorWithGraphQL = error as Error & { errors?: Array<{ message: string }> };
+        if (errorWithGraphQL.errors && Array.isArray(errorWithGraphQL.errors)) {
+          const errorMessages = errorWithGraphQL.errors.map((e) => e.message).join('\n');
+          console.error('GraphQL Errors:', errorWithGraphQL.errors);
+          toast.error('Failed to create club', {
+            description: errorMessages,
+            duration: 10000, // Show for 10 seconds so user can read it
+          });
+          return;
+        }
+        
+        // Show detailed error message
         if (error.message.includes('Network')) {
           toast.error('Network error. Please check your connection and try again.');
         } else if (error.message.includes('Unauthorized') || error.message.includes('Authentication')) {
@@ -123,10 +144,14 @@ export default function CreateClubModal({
         } else {
           toast.error('Failed to create club', {
             description: error.message,
+            duration: 10000,
           });
         }
       } else {
-        toast.error('An unexpected error occurred. Please try again.');
+        toast.error('An unexpected error occurred', {
+          description: String(error),
+          duration: 10000,
+        });
       }
     } finally {
       setIsSubmitting(false);

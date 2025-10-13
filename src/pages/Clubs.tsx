@@ -16,9 +16,6 @@ import { Input } from '@/components/ui/input';
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/../amplify/data/resource";
 
-// Type definitions
-type Club = Schema['Club']['type'];
-type ClubChapter = Schema['ClubChapter']['type'];
 /**
  * AWS Amplify End
  */
@@ -35,10 +32,6 @@ type SimpleClub = {
   updatedAt: string;
 };
 
-// Extended type for chapters with club relationship
-type ClubChapterWithClub = ClubChapter & {
-  club?: Club;
-};
 
 function ClubsSidebar({
   clubs,
@@ -235,7 +228,26 @@ export default function Clubs() {
   const { authStatus } = useAuthenticator((context) => [context.authStatus]);
   const [allClubs, setAllClubs] = useState<SimpleClub[]>([]);
   const [clubs, setClubs] = useState<SimpleClub[]>([]);
-  const [chapters, setChapters] = useState<any[]>([]);
+  const [chapters, setChapters] = useState<Array<{
+    id: string;
+    name: string;
+    description?: string | null;
+    address?: string | null;
+    city?: string | null;
+    state?: string | null;
+    zipCode?: string | null;
+    latitude: number;
+    longitude: number;
+    clubId: string;
+    club?: { name?: string; type?: string | null } | null;
+    roles?: Array<{
+      id: string;
+      roleTitle: string;
+      personName: string;
+      email?: string | null;
+      phone?: string | null;
+    }> | null;
+  }>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedClubIds, setSelectedClubIds] = useState<Set<string>>(new Set());
   const [selectedClubTypes, setSelectedClubTypes] = useState<Set<string>>(new Set(CLUB_TYPE_VALUES));
@@ -282,7 +294,7 @@ export default function Clubs() {
         const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
         
         // Build club filter
-        const clubFilter: any = { approved: { eq: true } };
+        const clubFilter: Record<string, unknown> = { approved: { eq: true } };
         
         // Add club type filter if any types are selected
         if (selectedClubTypes.size > 0) {
@@ -358,7 +370,7 @@ export default function Clubs() {
       const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
       
       // Build club filter
-      const clubFilter: any = { approved: { eq: true } };
+      const clubFilter: Record<string, unknown> = { approved: { eq: true } };
       
       // Add club type filter if any types are selected
       if (selectedClubTypes.size > 0) {
@@ -414,7 +426,7 @@ export default function Clubs() {
         const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
         
         // Build chapter filter based on selected clubs and geographic bounds
-        const filters: any[] = [{ approved: { eq: true } }];
+        const filters: Array<Record<string, unknown>> = [{ approved: { eq: true } }];
         
         // Add club ID filter
         if (selectedClubIds.size > 0) {
@@ -494,7 +506,7 @@ export default function Clubs() {
       const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
       
       // Build chapter filter based on selected clubs and geographic bounds
-      const filters: any[] = [{ approved: { eq: true } }];
+      const filters: Array<Record<string, unknown>> = [{ approved: { eq: true } }];
       
       // Add club ID filter
       if (selectedClubIds.size > 0) {
@@ -615,7 +627,7 @@ export default function Clubs() {
       state: chapter.state || undefined,
       latitude: chapter.latitude,
       longitude: chapter.longitude,
-      roles: rolesArray.map(role => ({
+      roles: rolesArray.map((role) => ({
         id: role.id,
         roleTitle: role.roleTitle,
         personName: role.personName,
