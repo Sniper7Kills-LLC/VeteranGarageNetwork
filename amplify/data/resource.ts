@@ -19,7 +19,7 @@ const schema = a.schema({
     })
     .authorization((allow) => [
       allow.guest().to(['read']),
-      allow.authenticated(),
+      allow.authenticated().to(['read','create']),
     ]),
 
   ClubChapter: a
@@ -39,7 +39,7 @@ const schema = a.schema({
     })
     .authorization((allow) => [
       allow.guest().to(['read']),
-      allow.authenticated(),
+      allow.authenticated().to(['read','create']),
     ]),
 
   ChapterRole: a
@@ -53,7 +53,7 @@ const schema = a.schema({
     })
     .authorization((allow) => [
       allow.guest().to(['read']),
-      allow.authenticated(),
+      allow.authenticated().to(['read','create']),
     ]),
 });
 
