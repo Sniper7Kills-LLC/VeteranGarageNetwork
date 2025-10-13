@@ -4,11 +4,8 @@ import ContentWithSidebar from '@/components/layouts/ContentWithSidebar';
 import Map, { type MapBounds } from '@/components/Map';
 import ChapterModal from '@/components/ChapterModal';
 import RegisterChapterModal from '@/components/RegisterChapterModal';
-import { Checkbox } from '@/components/ui/checkbox';
+import ClubFilter from '@/components/filters/ClubFilter';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Input } from '@/components/ui/input';
-import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card';
 
 /**
  * AWS Amplify Start
@@ -22,16 +19,7 @@ import type { Schema } from "@/../amplify/data/resource";
  */
 
 // Import club types from centralized config
-import { CLUB_TYPE_VALUES } from '@/../amplify/config/enums';
-
-// Club type descriptions for hovercards
-const CLUB_TYPE_DESCRIPTIONS: Record<string, string> = {
-  'Public': 'Open to all riders regardless of background or service history',
-  'First_Responders_Only': 'Membership restricted to first responders including law enforcement, firefighters, and emergency medical personnel',
-  'Veteran_Only': 'Membership restricted to military veterans who have served in any branch of the armed forces',
-  'Law_Enforcement_Only': 'Membership restricted to current and former law enforcement officers',
-  'Fire_Fighters_Only': 'Membership restricted to current and former firefighters and fire service personnel'
-};
+import { CLUB_TYPE_VALUES, CLUB_TYPE_DESCRIPTIONS } from '@/../amplify/config/enums';
 
 // Simplified Club type for state management
 type SimpleClub = {
@@ -42,233 +30,6 @@ type SimpleClub = {
   createdAt: string;
   updatedAt: string;
 };
-
-
-function ClubsSidebar({
-  clubs,
-  selectedClubIds,
-  onClubToggle,
-  selectedClubTypes,
-  onClubTypeToggle,
-  isAuthenticated,
-  onRegisterClick,
-  clubSearchQuery,
-  onClubSearchChange,
-  hasMoreClubs,
-  onLoadMoreClubs,
-  isLoadingMoreClubs,
-}: {
-  clubs: SimpleClub[];
-  selectedClubIds: Set<string>;
-  onClubToggle: (clubId: string) => void;
-  selectedClubTypes: Set<string>;
-  onClubTypeToggle: (clubType: string) => void;
-  isAuthenticated: boolean;
-  onRegisterClick: () => void;
-  clubSearchQuery: string;
-  onClubSearchChange: (query: string) => void;
-  hasMoreClubs: boolean;
-  onLoadMoreClubs: () => void;
-  isLoadingMoreClubs: boolean;
-}) {
-  const allClubsSelected = selectedClubIds.size === clubs.length;
-  const allTypesSelected = selectedClubTypes.size === CLUB_TYPE_VALUES.length;
-
-  const handleAllClubsToggle = () => {
-    if (allClubsSelected) {
-      // Deselect all
-      clubs.forEach((club) => {
-        if (selectedClubIds.has(club.id)) {
-          onClubToggle(club.id);
-        }
-      });
-    } else {
-      // Select all
-      clubs.forEach((club) => {
-        if (!selectedClubIds.has(club.id)) {
-          onClubToggle(club.id);
-        }
-      });
-    }
-  };
-
-  const handleAllTypesToggle = () => {
-    if (allTypesSelected) {
-      // Deselect all
-      CLUB_TYPE_VALUES.forEach((type) => {
-        if (selectedClubTypes.has(type)) {
-          onClubTypeToggle(type);
-        }
-      });
-    } else {
-      // Select all
-      CLUB_TYPE_VALUES.forEach((type) => {
-        if (!selectedClubTypes.has(type)) {
-          onClubTypeToggle(type);
-        }
-      });
-    }
-  };
-
-  // Helper function to format club type labels
-  const formatClubType = (type: string): string => {
-    return type.replace(/_/g, ' ');
-  };
-
-  return (
-    <div className="space-y-6">
-      {/* Register Chapter Button */}
-      {isAuthenticated && (
-        <Button onClick={onRegisterClick} className="w-full">
-          Register a Chapter
-        </Button>
-      )}
-      {/* Filter by Club Type */}
-      <div className="p-4 border border-border rounded-lg bg-card">
-        <h3 className="font-semibold mb-3">Filter by Club Type</h3>
-        <ScrollArea className="h-[200px] pr-4">
-          <div className="space-y-3">
-            {/* All Types option */}
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="all-types"
-                checked={allTypesSelected}
-                onCheckedChange={handleAllTypesToggle}
-              />
-              <label
-                htmlFor="all-types"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-              >
-                All Types
-              </label>
-            </div>
-
-            <div className="border-t border-border my-2" />
-
-            {/* Individual type filters */}
-            {CLUB_TYPE_VALUES.map((type) => (
-              <HoverCard key={type}>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`type-${type}`}
-                    checked={selectedClubTypes.has(type)}
-                    onCheckedChange={() => onClubTypeToggle(type)}
-                  />
-                  <HoverCardTrigger asChild>
-                    <label
-                      htmlFor={`type-${type}`}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                    >
-                      {formatClubType(type)}
-                    </label>
-                  </HoverCardTrigger>
-                </div>
-                <HoverCardContent className="w-80" side="right">
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-semibold">{formatClubType(type)}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {CLUB_TYPE_DESCRIPTIONS[type]}
-                    </p>
-                  </div>
-                </HoverCardContent>
-              </HoverCard>
-            ))}
-          </div>
-        </ScrollArea>
-      </div>
-
-      {/* Filter by Club */}
-      <div className="p-4 border border-border rounded-lg bg-card">
-        <h3 className="font-semibold mb-3">Filter by Club</h3>
-        
-        {/* Search Input */}
-        <Input
-          type="text"
-          placeholder="Search clubs (case-sensitive)..."
-          value={clubSearchQuery}
-          onChange={(e) => onClubSearchChange(e.target.value)}
-          className="mb-3"
-        />
-        
-        <ScrollArea className="h-[300px] pr-4">
-          <div className="space-y-3">
-            {/* All Clubs option */}
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="all-clubs"
-                checked={allClubsSelected}
-                onCheckedChange={handleAllClubsToggle}
-              />
-              <label
-                htmlFor="all-clubs"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-              >
-                All Clubs
-              </label>
-            </div>
-
-            <div className="border-t border-border my-2" />
-
-            {/* Individual club filters */}
-            {clubs.map((club) => (
-              <HoverCard key={club.id}>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id={club.id}
-                    checked={selectedClubIds.has(club.id)}
-                    onCheckedChange={() => onClubToggle(club.id)}
-                  />
-                  <HoverCardTrigger asChild>
-                    <label
-                      htmlFor={club.id}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                    >
-                      {club.name}
-                    </label>
-                  </HoverCardTrigger>
-                </div>
-                <HoverCardContent className="w-80" side="right">
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-semibold">{club.name}</h4>
-                    {club.type && (
-                      <p className="text-xs text-muted-foreground">
-                        Type: {formatClubType(club.type)}
-                      </p>
-                    )}
-                    {club.description ? (
-                      <p className="text-sm text-muted-foreground">
-                        {club.description}
-                      </p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground italic">
-                        No description available
-                      </p>
-                    )}
-                  </div>
-                </HoverCardContent>
-              </HoverCard>
-            ))}
-            
-            {/* Load More Button */}
-            {hasMoreClubs && (
-              <div className="pt-2">
-                <Button
-                  onClick={onLoadMoreClubs}
-                  disabled={isLoadingMoreClubs}
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                >
-                  {isLoadingMoreClubs ? 'Loading...' : 'Load More'}
-                </Button>
-              </div>
-            )}
-          </div>
-        </ScrollArea>
-      </div>
-    </div>
-  );
-}
 
 export default function Clubs() {
   const { authStatus } = useAuthenticator((context) => [context.authStatus]);
@@ -757,19 +518,28 @@ export default function Clubs() {
   return (
     <ContentWithSidebar
       sidebar={
-        <ClubsSidebar
+        <ClubFilter
           clubs={clubs}
-          selectedClubIds={selectedClubIds}
-          onClubToggle={handleClubToggle}
+          showClubTypeFilter={true}
+          clubTypes={CLUB_TYPE_VALUES}
           selectedClubTypes={selectedClubTypes}
           onClubTypeToggle={handleClubTypeToggle}
-          isAuthenticated={isAuthenticated}
-          onRegisterClick={() => setIsRegisterModalOpen(true)}
-          clubSearchQuery={clubSearchQuery}
-          onClubSearchChange={setClubSearchQuery}
+          clubTypeDescriptions={CLUB_TYPE_DESCRIPTIONS}
+          selectedClubIds={selectedClubIds}
+          onClubToggle={handleClubToggle}
+          showSearch={true}
+          searchQuery={clubSearchQuery}
+          onSearchChange={setClubSearchQuery}
           hasMoreClubs={clubNextToken !== null}
-          onLoadMoreClubs={handleLoadMoreClubs}
-          isLoadingMoreClubs={isLoadingMoreClubs}
+          onLoadMore={handleLoadMoreClubs}
+          isLoadingMore={isLoadingMoreClubs}
+          headerContent={
+            isAuthenticated ? (
+              <Button onClick={() => setIsRegisterModalOpen(true)} className="w-full">
+                Register a Chapter
+              </Button>
+            ) : undefined
+          }
         />
       }
     >

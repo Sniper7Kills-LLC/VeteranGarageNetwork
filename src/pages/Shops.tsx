@@ -1,13 +1,31 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useAuthenticator } from '@aws-amplify/ui-react';
 import ContentWithSidebar from '@/components/layouts/ContentWithSidebar';
 import Map from '@/components/Map';
 import ShopModal from '@/components/ShopModal';
-import { Checkbox } from '@/components/ui/checkbox';
+import ClubFilter from '@/components/filters/ClubFilter';
+import ShopServiceFilter from '@/components/filters/ShopServiceFilter';
+
+/**
+ * AWS Amplify Start
+ */
+// Imports
+import { generateClient } from "aws-amplify/data";
+import type { Schema } from "@/../amplify/data/resource";
+
+/**
+ * AWS Amplify End
+ */
+
+// Import shop services from centralized config
+import { SHOP_SERVICE_VALUES, SHOP_SERVICE_DESCRIPTIONS } from '@/../amplify/config/enums';
 
 // Type definitions
 interface Club {
   id: string;
   name: string;
+  type?: string | null;
+  description?: string | null;
 }
 
 interface ClubAssociation {
@@ -35,15 +53,7 @@ interface Shop {
   clubAssociations: ClubAssociation[];
 }
 
-// Mock data for clubs (matching the Clubs page)
-const mockClubs: Club[] = [
-  { id: 'combat-customs', name: 'Combat Customs' },
-  { id: 'final-call', name: 'Final Call' },
-  { id: 'hog', name: 'HOG (Harley Owners Group)' },
-  { id: 'veterans-garage', name: 'Veterans Garage' },
-];
-
-// Mock data for shops with club associations
+// Mock data for shops with club associations (will be replaced with database data in the future)
 const mockShops: Shop[] = [
   {
     id: 'cc-sd-shop',
@@ -253,85 +263,40 @@ const mockShops: Shop[] = [
   },
 ];
 
-function ShopsSidebar({
-  clubs,
-  selectedClubIds,
-  onClubToggle,
-}: {
-  clubs: Club[];
-  selectedClubIds: Set<string>;
-  onClubToggle: (clubId: string) => void;
-}) {
-  const allSelected = selectedClubIds.size === clubs.length;
-
-  const handleAllToggle = () => {
-    if (allSelected) {
-      // Deselect all
-      clubs.forEach((club) => {
-        if (selectedClubIds.has(club.id)) {
-          onClubToggle(club.id);
-        }
-      });
-    } else {
-      // Select all
-      clubs.forEach((club) => {
-        if (!selectedClubIds.has(club.id)) {
-          onClubToggle(club.id);
-        }
-      });
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="p-4 border border-border rounded-lg bg-card">
-        <h3 className="font-semibold mb-3">Filter by Club Association</h3>
-        <div className="space-y-3">
-          {/* All Clubs option */}
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="all-clubs"
-              checked={allSelected}
-              onCheckedChange={handleAllToggle}
-            />
-            <label
-              htmlFor="all-clubs"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-            >
-              All Shops
-            </label>
-          </div>
-
-          <div className="border-t border-border my-2" />
-
-          {/* Individual club filters */}
-          {clubs.map((club) => (
-            <div key={club.id} className="flex items-center space-x-2">
-              <Checkbox
-                id={club.id}
-                checked={selectedClubIds.has(club.id)}
-                onCheckedChange={() => onClubToggle(club.id)}
-              />
-              <label
-                htmlFor={club.id}
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-              >
-                {club.name}
-              </label>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function Shops() {
-  const [selectedClubIds, setSelectedClubIds] = useState<Set<string>>(
-    new Set(mockClubs.map((club) => club.id))
-  );
+  const { authStatus } = useAuthenticator((context) => [context.authStatus]);
+  const [clubs, setClubs] = useState<Club[]>([]);
+  const [selectedClubIds, setSelectedClubIds] = useState<Set<string>>(new Set());
+  const [selectedServices, setSelectedServices] = useState<Set<string>>(new Set(SHOP_SERVICE_VALUES));
   const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Fetch clubs from database
+  useEffect(() => {
+    const fetchClubs = async () => {
+      try {
+        const client = generateClient<Schema>();
+        const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
+        
+        const { data: clubsData } = await client.models.Club.list({
+          selectionSet: ['id', 'name', 'type', 'description'],
+          authMode,
+          filter: { approved: { eq: true } }
+        });
+        
+        setClubs(clubsData || []);
+        // Initialize all clubs as selected
+        if (clubsData && clubsData.length > 0) {
+          setSelectedClubIds(new Set(clubsData.map(club => club.id)));
+        }
+      } catch (error) {
+        console.error('Error fetching clubs:', error);
+        setClubs([]);
+      }
+    };
+    
+    fetchClubs();
+  }, [authStatus]);
 
   const handleClubToggle = (clubId: string) => {
     setSelectedClubIds((prev) => {
@@ -345,13 +310,36 @@ export default function Shops() {
     });
   };
 
+  const handleServiceToggle = (service: string) => {
+    setSelectedServices((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(service)) {
+        newSet.delete(service);
+      } else {
+        newSet.add(service);
+      }
+      return newSet;
+    });
+  };
+
   const filteredShops = useMemo(() => {
-    return mockShops.filter((shop) =>
-      shop.clubAssociations.some((association) =>
+    return mockShops.filter((shop) => {
+      // Filter by club associations
+      const matchesClub = shop.clubAssociations.some((association) =>
         selectedClubIds.has(association.clubId)
-      )
-    );
-  }, [selectedClubIds]);
+      );
+      
+      // Filter by services (if shop has any of the selected services)
+      const matchesService = selectedServices.size === 0 || 
+        shop.services?.some((service) => {
+          // Convert service to enum format for comparison
+          const enumService = service.replace(/ /g, '_').replace(/&/g, 'And');
+          return selectedServices.has(enumService);
+        });
+      
+      return matchesClub && matchesService;
+    });
+  }, [selectedClubIds, selectedServices]);
 
   const mapLocations = useMemo(() => {
     return filteredShops.map((shop) => ({
@@ -376,11 +364,23 @@ export default function Shops() {
   return (
     <ContentWithSidebar
       sidebar={
-        <ShopsSidebar
-          clubs={mockClubs}
-          selectedClubIds={selectedClubIds}
-          onClubToggle={handleClubToggle}
-        />
+        <div className="space-y-6">
+          <ShopServiceFilter
+            services={SHOP_SERVICE_VALUES}
+            selectedServices={selectedServices}
+            onServiceToggle={handleServiceToggle}
+            serviceDescriptions={SHOP_SERVICE_DESCRIPTIONS}
+          />
+          
+          <ClubFilter
+            clubs={clubs}
+            showSearch={true}
+            selectedClubIds={selectedClubIds}
+            onClubToggle={handleClubToggle}
+            clubFilterTitle="Filter by Club Association"
+            allClubsLabel="All Shops"
+          />
+        </div>
       }
     >
       <div className="space-y-6">
