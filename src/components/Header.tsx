@@ -1,6 +1,22 @@
 import { Link } from 'react-router-dom';
+import { useAuthenticator, Authenticator } from '@aws-amplify/ui-react';
+import { useState, useEffect } from 'react';
+import { Button } from './ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 
 export default function Header() {
+  const { user, signOut, authStatus } = useAuthenticator((context) => [context.user]);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  const isAuthenticated = authStatus === 'authenticated';
+
+  // Close modal when user successfully authenticates
+  useEffect(() => {
+    if (isAuthenticated && showAuthModal) {
+      setShowAuthModal(false);
+    }
+  }, [isAuthenticated, showAuthModal]);
+
   return (
     <header className="border-b border-border bg-background">
       <div className="container mx-auto px-4 py-4">
@@ -30,8 +46,42 @@ export default function Header() {
               </Link>
             </div>
           </div>
+
+          <div className="flex items-center gap-4">
+            {isAuthenticated ? (
+              <>
+                <span className="text-sm text-muted-foreground">
+                  {user?.signInDetails?.loginId || user?.username}
+                </span>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={signOut}
+                >
+                  Sign Out
+                </Button>
+              </>
+            ) : (
+              <Button 
+                variant="default" 
+                size="sm"
+                onClick={() => setShowAuthModal(true)}
+              >
+                Login / Sign Up
+              </Button>
+            )}
+          </div>
         </nav>
       </div>
+
+      <Dialog open={showAuthModal} onOpenChange={setShowAuthModal}>
+        <DialogContent className="">
+          <DialogHeader>
+            <DialogTitle></DialogTitle>
+          </DialogHeader>
+          <Authenticator />
+        </DialogContent>
+      </Dialog>
     </header>
   );
 }
