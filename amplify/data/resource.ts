@@ -21,6 +21,8 @@ const schema = a.schema({
         allow.groups(['admin']).to(['read', 'update']),
       ]),
       owner: a.string().authorization((allow) => [
+        allow.guest().to(['read']),
+        allow.authenticated().to(['read']),
         allow.groups(['admin']).to(['read', 'update'])
       ]),
       
@@ -58,6 +60,8 @@ const schema = a.schema({
         allow.groups(['admin']).to(['read', 'update']),
       ]),
       owner: a.string().authorization((allow) => [
+        allow.guest().to(['read']),
+        allow.authenticated().to(['read']),
         allow.groups(['admin']).to(['read', 'update'])
       ]),
 
@@ -92,6 +96,8 @@ const schema = a.schema({
 
       // Admin & System Fields
       owner: a.string().authorization((allow) => [
+        allow.guest().to(['read']),
+        allow.authenticated().to(['read']),
         allow.groups(['admin']).to(['read', 'update'])
       ]),
 
