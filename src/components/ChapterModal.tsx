@@ -60,7 +60,7 @@ export default function ChapterModal({
                     key={type}
                     className="px-3 py-1 text-sm bg-primary/10 text-primary rounded-full"
                   >
-                    {type}
+                    {type.replace(/_/g, ' ')}
                   </span>
                 ))}
               </div>

@@ -14,24 +14,17 @@ import LocationPickerMap from './LocationPickerMap';
 /**
  * AWS Amplify Start
  */
-// Imports
-//import { generateClient } from "aws-amplify/data";
-import type { Schema } from "@/../amplify/data/resource";
-
-// Create the Client
-//const client = generateClient<Schema>()
-
-//Get the Data
-//const { data: clubs } = await client.models.Club.list()
-
-// Type definitions
-type Club = Schema['Club']['type'];
+// Simplified Club type for props (only what we actually use)
+type SimpleClub = {
+  id: string;
+  name: string;
+};
 /**
  * AWS Amplify End
  */
 
 interface RegisterChapterModalProps {
-  clubs: Club[];
+  clubs: SimpleClub[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;

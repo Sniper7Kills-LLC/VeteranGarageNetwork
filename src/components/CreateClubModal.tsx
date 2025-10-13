@@ -8,9 +8,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
+import { toast } from 'sonner';
 
-import { CLUB_TYPE_VALUES } from '@/../amplify/config/enums';
+import { CLUB_TYPE_VALUES, type ClubType } from '@/../amplify/config/enums';
+import { generateClient } from 'aws-amplify/data';
+import type { Schema } from '@/../amplify/data/resource';
 
 interface CreateClubModalProps {
   open: boolean;
@@ -25,43 +27,110 @@ export default function CreateClubModal({
 }: CreateClubModalProps) {
   const [clubName, setClubName] = useState('');
   const [clubDescription, setClubDescription] = useState('');
-  const [selectedClubTypes, setSelectedClubTypes] = useState<Set<string>>(new Set());
-
-  const handleClubTypeToggle = (type: string) => {
-    setSelectedClubTypes((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(type)) {
-        newSet.delete(type);
-      } else {
-        newSet.add(type);
-      }
-      return newSet;
-    });
-  };
+  const [selectedClubType, setSelectedClubType] = useState<string>('');
+  const [adminNotes, setAdminNotes] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const resetForm = () => {
     setClubName('');
     setClubDescription('');
-    setSelectedClubTypes(new Set());
+    setSelectedClubType('');
+    setAdminNotes('');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Helper function to format club type labels
+  const formatClubType = (type: string): string => {
+    return type.split('_').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    ).join(' ');
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!clubName) {
-      alert('Please enter a club name');
+    if (!clubName.trim()) {
+      toast.error('Please enter a club name');
       return;
     }
 
-    // Pass the club data back to parent
-    onSuccess({
-      name: clubName,
-      description: clubDescription,
-      clubTypes: Array.from(selectedClubTypes),
-    });
+    if (!adminNotes.trim()) {
+      toast.error('Please provide contact information in the admin approval notes');
+      return;
+    }
 
-    resetForm();
-    onOpenChange(false);
+    setIsSubmitting(true);
+
+    try {
+      const client = generateClient<Schema>();
+      
+      // Prepare club data
+      const clubData: {
+        name: string;
+        description?: string;
+        notes: string;
+        type?: ClubType;
+      } = {
+        name: clubName.trim(),
+        description: clubDescription.trim() || undefined,
+        notes: adminNotes.trim(),
+      };
+
+      // Add club type if one is selected
+      if (selectedClubType) {
+        clubData.type = selectedClubType as ClubType;
+      }
+
+      // Create the club in the database
+      const { data: newClub, errors } = await client.models.Club.create(
+        clubData,
+        { authMode: 'userPool' }
+      );
+
+      if (errors && errors.length > 0) {
+        console.error('Club creation errors:', errors);
+        toast.error('Failed to create club. Please try again.');
+        return;
+      }
+
+      if (!newClub) {
+        toast.error('Failed to create club. Please try again.');
+        return;
+      }
+
+      // Show success message
+      toast.success('Club created successfully!', {
+        description: 'Your club is pending admin approval. You will be notified once it is approved.',
+      });
+
+      // Pass the club data back to parent for any additional handling
+      onSuccess({
+        name: clubName,
+        description: clubDescription,
+        clubTypes: selectedClubType ? [selectedClubType] : [],
+      });
+
+      resetForm();
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error creating club:', error);
+      
+      // Handle specific error types
+      if (error instanceof Error) {
+        if (error.message.includes('Network')) {
+          toast.error('Network error. Please check your connection and try again.');
+        } else if (error.message.includes('Unauthorized') || error.message.includes('Authentication')) {
+          toast.error('You must be logged in to create a club.');
+        } else {
+          toast.error('Failed to create club', {
+            description: error.message,
+          });
+        }
+      } else {
+        toast.error('An unexpected error occurred. Please try again.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -95,24 +164,20 @@ export default function CreateClubModal({
           </div>
 
           <div>
-            <Label>Club Types</Label>
-            <div className="space-y-2 mt-2">
+            <Label htmlFor="club-type">Club Type</Label>
+            <select
+              id="club-type"
+              value={selectedClubType}
+              onChange={(e) => setSelectedClubType(e.target.value)}
+              className="w-full mt-1 p-2 border border-border rounded-md bg-background"
+            >
+              <option value="">-- Select a club type --</option>
               {CLUB_TYPE_VALUES.map((type) => (
-                <div key={type} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`create-club-type-${type}`}
-                    checked={selectedClubTypes.has(type)}
-                    onCheckedChange={() => handleClubTypeToggle(type)}
-                  />
-                  <label
-                    htmlFor={`create-club-type-${type}`}
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                  >
-                    {type}
-                  </label>
-                </div>
+                <option key={type} value={type}>
+                  {formatClubType(type)}
+                </option>
               ))}
-            </div>
+            </select>
           </div>
 
           <div>
@@ -123,8 +188,11 @@ export default function CreateClubModal({
             </p>
             <textarea
               id="admin-notes"
+              value={adminNotes}
+              onChange={(e) => setAdminNotes(e.target.value)}
               placeholder="Enter your contact information and any additional context for reviewers..."
               className="w-full mt-1 p-2 border border-border rounded-md bg-background min-h-[100px]"
+              required
             />
           </div>
 
@@ -139,7 +207,9 @@ export default function CreateClubModal({
             >
               Cancel
             </Button>
-            <Button type="submit">Create Club</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Creating...' : 'Create Club'}
+            </Button>
           </div>
         </form>
       </DialogContent>

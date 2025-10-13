@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -47,13 +47,65 @@ interface MapLocation {
   description?: string;
 }
 
+export interface MapBounds {
+  northEast: { lat: number; lng: number };
+  southWest: { lat: number; lng: number };
+}
+
 interface MapProps {
   locations: MapLocation[];
   center?: [number, number];
   zoom?: number;
   onMarkerClick?: (locationId: string) => void;
+  onBoundsChange?: (bounds: MapBounds) => void;
   route?: [number, number][]; // Optional route waypoints for rides
   showRouteMarkers?: boolean; // Show start/end markers for route
+}
+
+// Component to track map bounds and notify parent
+function BoundsTracker({ onBoundsChange }: { onBoundsChange?: (bounds: MapBounds) => void }) {
+  const map = useMapEvents({
+    moveend: () => {
+      if (onBoundsChange) {
+        const bounds = map.getBounds();
+        const northEast = bounds.getNorthEast();
+        const southWest = bounds.getSouthWest();
+        
+        onBoundsChange({
+          northEast: { lat: northEast.lat, lng: northEast.lng },
+          southWest: { lat: southWest.lat, lng: southWest.lng },
+        });
+      }
+    },
+    zoomend: () => {
+      if (onBoundsChange) {
+        const bounds = map.getBounds();
+        const northEast = bounds.getNorthEast();
+        const southWest = bounds.getSouthWest();
+        
+        onBoundsChange({
+          northEast: { lat: northEast.lat, lng: northEast.lng },
+          southWest: { lat: southWest.lat, lng: southWest.lng },
+        });
+      }
+    },
+  });
+
+  // Also call on initial mount
+  useEffect(() => {
+    if (onBoundsChange) {
+      const bounds = map.getBounds();
+      const northEast = bounds.getNorthEast();
+      const southWest = bounds.getSouthWest();
+      
+      onBoundsChange({
+        northEast: { lat: northEast.lat, lng: northEast.lng },
+        southWest: { lat: southWest.lat, lng: southWest.lng },
+      });
+    }
+  }, [map, onBoundsChange]);
+
+  return null;
 }
 
 // Component to handle route rendering with OSRM
@@ -145,6 +197,7 @@ export default function Map({
   center = [39.8283, -98.5795], // Center of USA
   zoom = 4,
   onMarkerClick,
+  onBoundsChange,
   route,
   showRouteMarkers = false
 }: MapProps) {
@@ -160,6 +213,9 @@ export default function Map({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        
+        {/* Bounds tracker */}
+        <BoundsTracker onBoundsChange={onBoundsChange} />
         
         {/* Route layer with OSRM routing */}
         <RouteLayer route={route} showRouteMarkers={showRouteMarkers} />
