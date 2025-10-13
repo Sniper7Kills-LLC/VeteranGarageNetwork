@@ -6,10 +6,10 @@
 
 export const CLUB_TYPE_VALUES = [
   'Public',
-  'First-Responders-Only',
-  'Veteran-Only',
-  'Law-Enforcement-Only',
-  'Fire-Fighters-Only'
+  'First_Responders_Only',
+  'Veteran_Only',
+  'Law_Enforcement_Only',
+  'Fire_Fighters_Only'
 ] as const;
 
 export type ClubType = typeof CLUB_TYPE_VALUES[number];
