@@ -57,6 +57,7 @@ const schema = a.schema({
 
       // Admin & System Fields
       approved: a.boolean().default(false).authorization((allow) => [
+        allow.authenticated().to(['create']),
         allow.groups(['admin']).to(['read', 'update']),
       ]),
       owner: a.string().authorization((allow) => [
