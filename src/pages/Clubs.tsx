@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
+import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card';
 
 /**
  * AWS Amplify Start
@@ -23,11 +24,21 @@ import type { Schema } from "@/../amplify/data/resource";
 // Import club types from centralized config
 import { CLUB_TYPE_VALUES } from '@/../amplify/config/enums';
 
+// Club type descriptions for hovercards
+const CLUB_TYPE_DESCRIPTIONS: Record<string, string> = {
+  'Public': 'Open to all riders regardless of background or service history',
+  'First_Responders_Only': 'Membership restricted to first responders including law enforcement, firefighters, and emergency medical personnel',
+  'Veteran_Only': 'Membership restricted to military veterans who have served in any branch of the armed forces',
+  'Law_Enforcement_Only': 'Membership restricted to current and former law enforcement officers',
+  'Fire_Fighters_Only': 'Membership restricted to current and former firefighters and fire service personnel'
+};
+
 // Simplified Club type for state management
 type SimpleClub = {
   id: string;
   name: string;
   type: string | null;
+  description: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -136,19 +147,31 @@ function ClubsSidebar({
 
             {/* Individual type filters */}
             {CLUB_TYPE_VALUES.map((type) => (
-              <div key={type} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`type-${type}`}
-                  checked={selectedClubTypes.has(type)}
-                  onCheckedChange={() => onClubTypeToggle(type)}
-                />
-                <label
-                  htmlFor={`type-${type}`}
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                >
-                  {formatClubType(type)}
-                </label>
-              </div>
+              <HoverCard key={type}>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`type-${type}`}
+                    checked={selectedClubTypes.has(type)}
+                    onCheckedChange={() => onClubTypeToggle(type)}
+                  />
+                  <HoverCardTrigger asChild>
+                    <label
+                      htmlFor={`type-${type}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      {formatClubType(type)}
+                    </label>
+                  </HoverCardTrigger>
+                </div>
+                <HoverCardContent className="w-80" side="right">
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold">{formatClubType(type)}</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {CLUB_TYPE_DESCRIPTIONS[type]}
+                    </p>
+                  </div>
+                </HoverCardContent>
+              </HoverCard>
             ))}
           </div>
         </ScrollArea>
@@ -161,7 +184,7 @@ function ClubsSidebar({
         {/* Search Input */}
         <Input
           type="text"
-          placeholder="Search clubs..."
+          placeholder="Search clubs (case-sensitive)..."
           value={clubSearchQuery}
           onChange={(e) => onClubSearchChange(e.target.value)}
           className="mb-3"
@@ -188,19 +211,42 @@ function ClubsSidebar({
 
             {/* Individual club filters */}
             {clubs.map((club) => (
-              <div key={club.id} className="flex items-center space-x-2">
-                <Checkbox
-                  id={club.id}
-                  checked={selectedClubIds.has(club.id)}
-                  onCheckedChange={() => onClubToggle(club.id)}
-                />
-                <label
-                  htmlFor={club.id}
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                >
-                  {club.name}
-                </label>
-              </div>
+              <HoverCard key={club.id}>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id={club.id}
+                    checked={selectedClubIds.has(club.id)}
+                    onCheckedChange={() => onClubToggle(club.id)}
+                  />
+                  <HoverCardTrigger asChild>
+                    <label
+                      htmlFor={club.id}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      {club.name}
+                    </label>
+                  </HoverCardTrigger>
+                </div>
+                <HoverCardContent className="w-80" side="right">
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold">{club.name}</h4>
+                    {club.type && (
+                      <p className="text-xs text-muted-foreground">
+                        Type: {formatClubType(club.type)}
+                      </p>
+                    )}
+                    {club.description ? (
+                      <p className="text-sm text-muted-foreground">
+                        {club.description}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">
+                        No description available
+                      </p>
+                    )}
+                  </div>
+                </HoverCardContent>
+              </HoverCard>
             ))}
             
             {/* Load More Button */}
@@ -267,7 +313,7 @@ export default function Clubs() {
         const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
         
         const { data: clubsData } = await client.models.Club.list({
-          selectionSet: ['id', 'name', 'type', 'createdAt', 'updatedAt'],
+          selectionSet: ['id', 'name', 'type', 'description', 'createdAt', 'updatedAt'],
           authMode,
           filter: { approved: { eq: true } }
         });
@@ -296,24 +342,43 @@ export default function Clubs() {
         // Build club filter
         const clubFilter: Record<string, unknown> = { approved: { eq: true } };
         
-        // Add club type filter if any types are selected
-        if (selectedClubTypes.size > 0) {
+        const hasTypeFilter = selectedClubTypes.size > 0;
+        const hasSearchFilter = clubSearchQuery.trim();
+        
+        // Build type filter
+        let typeFilter: Record<string, unknown> | undefined;
+        if (hasTypeFilter) {
           const typeArray = Array.from(selectedClubTypes);
           if (typeArray.length === 1) {
-            clubFilter.type = { eq: typeArray[0] };
+            typeFilter = { type: { eq: typeArray[0] } };
           } else {
-            clubFilter.or = typeArray.map(type => ({ type: { eq: type } }));
+            typeFilter = { or: typeArray.map(type => ({ type: { eq: type } })) };
           }
         }
         
-        // Add search filter if query exists
-        if (clubSearchQuery.trim()) {
-          clubFilter.name = { contains: clubSearchQuery.trim() };
+        // Build search filter (name OR description)
+        let searchFilter: Record<string, unknown> | undefined;
+        if (hasSearchFilter) {
+          searchFilter = {
+            or: [
+              { name: { contains: clubSearchQuery.trim() } },
+              { description: { contains: clubSearchQuery.trim() } }
+            ]
+          };
+        }
+        
+        // Combine filters
+        if (typeFilter && searchFilter) {
+          clubFilter.and = [typeFilter, searchFilter];
+        } else if (typeFilter) {
+          Object.assign(clubFilter, typeFilter);
+        } else if (searchFilter) {
+          Object.assign(clubFilter, searchFilter);
         }
         
         // Fetch clubs with filter and pagination
         const response = await client.models.Club.list({
-          selectionSet: ['id', 'name', 'type', 'createdAt', 'updatedAt'],
+          selectionSet: ['id', 'name', 'type', 'description', 'createdAt', 'updatedAt'],
           authMode,
           filter: clubFilter,
           limit: 1000,
@@ -372,24 +437,43 @@ export default function Clubs() {
       // Build club filter
       const clubFilter: Record<string, unknown> = { approved: { eq: true } };
       
-      // Add club type filter if any types are selected
-      if (selectedClubTypes.size > 0) {
+      const hasTypeFilter = selectedClubTypes.size > 0;
+      const hasSearchFilter = clubSearchQuery.trim();
+      
+      // Build type filter
+      let typeFilter: Record<string, unknown> | undefined;
+      if (hasTypeFilter) {
         const typeArray = Array.from(selectedClubTypes);
         if (typeArray.length === 1) {
-          clubFilter.type = { eq: typeArray[0] };
+          typeFilter = { type: { eq: typeArray[0] } };
         } else {
-          clubFilter.or = typeArray.map(type => ({ type: { eq: type } }));
+          typeFilter = { or: typeArray.map(type => ({ type: { eq: type } })) };
         }
       }
       
-      // Add search filter if query exists
-      if (clubSearchQuery.trim()) {
-        clubFilter.name = { contains: clubSearchQuery.trim() };
+      // Build search filter (name OR description)
+      let searchFilter: Record<string, unknown> | undefined;
+      if (hasSearchFilter) {
+        searchFilter = {
+          or: [
+            { name: { contains: clubSearchQuery.trim() } },
+            { description: { contains: clubSearchQuery.trim() } }
+          ]
+        };
+      }
+      
+      // Combine filters
+      if (typeFilter && searchFilter) {
+        clubFilter.and = [typeFilter, searchFilter];
+      } else if (typeFilter) {
+        Object.assign(clubFilter, typeFilter);
+      } else if (searchFilter) {
+        Object.assign(clubFilter, searchFilter);
       }
       
       // Fetch next page
       const response = await client.models.Club.list({
-        selectionSet: ['id', 'name', 'type', 'createdAt', 'updatedAt'],
+        selectionSet: ['id', 'name', 'type', 'description', 'createdAt', 'updatedAt'],
         authMode,
         filter: clubFilter,
         limit: 1000,
@@ -645,7 +729,7 @@ export default function Clubs() {
         const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
         
         const { data: clubsData } = await client.models.Club.list({
-          selectionSet: ['id', 'name', 'type', 'createdAt', 'updatedAt'],
+          selectionSet: ['id', 'name', 'type', 'description', 'createdAt', 'updatedAt'],
           authMode,
           filter: { approved: { eq: true } }
         });

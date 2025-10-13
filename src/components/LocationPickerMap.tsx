@@ -67,28 +67,55 @@ export default function LocationPickerMap({
         const data = await response.json();
         const addr = data.address || {};
         
-        // Build street address from components
+        // Build street address from components with comprehensive fallbacks
         let streetAddress = '';
+        
+        // Try various combinations for complete street address
         if (addr.house_number && addr.road) {
           streetAddress = `${addr.house_number} ${addr.road}`;
+        } else if (addr.building && addr.road) {
+          streetAddress = `${addr.building} ${addr.road}`;
+        } else if (addr.amenity && addr.road) {
+          streetAddress = `${addr.amenity}, ${addr.road}`;
         } else if (addr.road) {
           streetAddress = addr.road;
         } else if (addr.street) {
           streetAddress = addr.street;
+        } else if (addr.pedestrian) {
+          streetAddress = addr.pedestrian;
+        } else if (addr.neighbourhood) {
+          streetAddress = addr.neighbourhood;
+        } else if (addr.suburb) {
+          streetAddress = addr.suburb;
         }
         
-        // Get city name and clean it up
-        let cityName = addr.city || addr.town || addr.village || addr.municipality || '';
-        // Remove "Town of", "City of", etc. prefixes
-        cityName = cityName.replace(/^(Town of|City of|Village of|Borough of)\s+/i, '');
+        // Get city name with comprehensive fallbacks
+        let cityName = 
+          addr.city || 
+          addr.town || 
+          addr.village || 
+          addr.municipality || 
+          addr.hamlet || 
+          addr.county || 
+          addr.state_district || 
+          '';
+        
+        // Remove common prefixes
+        cityName = cityName.replace(/^(Town of|City of|Village of|Borough of|County of)\s+/i, '');
+        
+        // Get state with fallbacks
+        const stateName = addr.state || addr.province || addr.region || '';
+        
+        // Get zip code with fallbacks
+        const zipCode = addr.postcode || addr.postal_code || '';
         
         onLocationSelect({
           lat,
           lng,
           address: streetAddress,
           city: cityName,
-          state: addr.state || '',
-          zipCode: addr.postcode || '',
+          state: stateName,
+          zipCode: zipCode,
         });
       } else {
         // If geocoding fails, just return coordinates

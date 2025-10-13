@@ -8,8 +8,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PhoneInput } from '@/components/ui/phone-input';
+import { toast } from 'sonner';
 import CreateClubModal from './CreateClubModal';
 import LocationPickerMap from './LocationPickerMap';
+
+import { generateClient } from 'aws-amplify/data';
+import type { Schema } from '@/../amplify/data/resource';
 
 /**
  * AWS Amplify Start
@@ -45,7 +50,7 @@ export default function RegisterChapterModal({
 }: RegisterChapterModalProps) {
   const [selectedClubId, setSelectedClubId] = useState('');
   const [isCreateClubModalOpen, setIsCreateClubModalOpen] = useState(false);
-  const [newClubData, setNewClubData] = useState<{ name: string; description: string; clubTypes: string[] } | null>(null);
+  const [newClubData, setNewClubData] = useState<{ id: string; name: string; description: string; clubTypes: string[] } | null>(null);
   
   // Chapter fields
   const [chapterName, setChapterName] = useState('');
@@ -61,6 +66,10 @@ export default function RegisterChapterModal({
   const [roles, setRoles] = useState<ChapterRole[]>([
     { roleTitle: '', personName: '', email: '', phone: '' }
   ]);
+  
+  // Admin notes
+  const [adminNotes, setAdminNotes] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const addRole = () => {
     setRoles([...roles, { roleTitle: '', personName: '', email: '', phone: '' }]);
@@ -76,7 +85,7 @@ export default function RegisterChapterModal({
     setRoles(newRoles);
   };
 
-  const handleCreateClubSuccess = (clubData: { name: string; description: string; clubTypes: string[] }) => {
+  const handleCreateClubSuccess = (clubData: { id: string; name: string; description: string; clubTypes: string[] }) => {
     setNewClubData(clubData);
     setSelectedClubId(''); // Clear any selected club
   };
@@ -109,19 +118,27 @@ export default function RegisterChapterModal({
     setLatitude('');
     setLongitude('');
     setRoles([{ roleTitle: '', personName: '', email: '', phone: '' }]);
+    setAdminNotes('');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Basic validation
     if (!selectedClubId && !newClubData) {
-      alert('Please select a club or create a new one');
+      toast.error('Please select a club or create a new one');
+      return;
+    }
+
+    // Determine the club ID to use
+    const clubIdToUse = selectedClubId || newClubData?.id;
+    if (!clubIdToUse) {
+      toast.error('Unable to determine club ID. Please try again.');
       return;
     }
     
-    if (!chapterName || !city || !state || !latitude || !longitude) {
-      alert('Please fill in all required chapter fields');
+    if (!chapterName.trim() || !city.trim() || !state.trim() || !latitude || !longitude) {
+      toast.error('Please fill in all required chapter fields');
       return;
     }
 
@@ -129,15 +146,156 @@ export default function RegisterChapterModal({
     const lat = parseFloat(latitude);
     const lng = parseFloat(longitude);
     if (isNaN(lat) || isNaN(lng)) {
-      alert('Please enter valid latitude and longitude values');
+      toast.error('Please enter valid latitude and longitude values');
       return;
     }
 
-    // For now, just show success message
-    alert('Chapter registration submitted successfully! (This is a mock submission)');
-    resetForm();
-    onSuccess();
-    onOpenChange(false);
+    if (!adminNotes.trim()) {
+      toast.error('Please provide contact information in the admin approval notes');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const client = generateClient<Schema>();
+      
+      // Prepare chapter data
+      const chapterData: {
+        clubId: string;
+        name: string;
+        description?: string;
+        address?: string;
+        city?: string;
+        state?: string;
+        zipCode?: string;
+        latitude: number;
+        longitude: number;
+        notes: string;
+      } = {
+        clubId: clubIdToUse,
+        name: chapterName.trim(),
+        latitude: lat,
+        longitude: lng,
+        notes: adminNotes.trim(),
+      };
+
+      // Add optional fields
+      if (chapterDescription.trim()) chapterData.description = chapterDescription.trim();
+      if (address.trim()) chapterData.address = address.trim();
+      if (city.trim()) chapterData.city = city.trim();
+      if (state.trim()) chapterData.state = state.trim();
+      if (zipCode.trim()) chapterData.zipCode = zipCode.trim();
+
+      // Create the chapter in the database
+      const { data: newChapter, errors: chapterErrors } = await client.models.ClubChapter.create(
+        chapterData,
+        { authMode: 'userPool' }
+      );
+
+      if (chapterErrors && chapterErrors.length > 0) {
+        console.error('Chapter creation errors:', chapterErrors);
+        const errorMessages = chapterErrors.map((e) => e.message).join('\n');
+        toast.error('Failed to create chapter', {
+          description: errorMessages,
+          duration: 10000,
+        });
+        return;
+      }
+
+      if (!newChapter) {
+        toast.error('Failed to create chapter. Please try again.');
+        return;
+      }
+
+      // Validation regex for email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // RFC 5322 simplified
+
+      // Create chapter roles
+      const roleCreationPromises = roles
+        .filter(role => role.roleTitle.trim() && role.personName.trim()) // Only create roles with required fields
+        .map(async (role) => {
+          const roleData: {
+            chapterId: string;
+            roleTitle: string;
+            personName: string;
+            email?: string;
+            phone?: string;
+          } = {
+            chapterId: newChapter.id,
+            roleTitle: role.roleTitle.trim(),
+            personName: role.personName.trim(),
+          };
+
+          // Only include email if it's valid
+          const trimmedEmail = role.email.trim();
+          if (trimmedEmail && emailRegex.test(trimmedEmail)) {
+            roleData.email = trimmedEmail;
+          }
+
+          // Only include phone if it's not empty (PhoneInput already ensures E.164 format)
+          if (role.phone) {
+            roleData.phone = role.phone;
+          }
+
+          return client.models.ChapterRole.create(roleData, { authMode: 'userPool' });
+        });
+
+      // Wait for all roles to be created
+      const roleResults = await Promise.all(roleCreationPromises);
+      
+      // Check for role creation errors
+      const roleErrors = roleResults.filter(result => result.errors && result.errors.length > 0);
+      if (roleErrors.length > 0) {
+        console.warn('Some roles failed to create:', roleErrors);
+        toast.warning('Chapter created, but some roles failed to save', {
+          description: 'The chapter was created successfully, but there were issues saving some roles.',
+        });
+      } else {
+        // Show success message
+        toast.success('Chapter created successfully!', {
+          description: 'Your chapter is pending admin approval. You will be notified once it is approved.',
+        });
+      }
+
+      resetForm();
+      onSuccess();
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error creating chapter:', error);
+      
+      // Handle specific error types
+      if (error instanceof Error) {
+        const errorWithGraphQL = error as Error & { errors?: Array<{ message: string }> };
+        if (errorWithGraphQL.errors && Array.isArray(errorWithGraphQL.errors)) {
+          const errorMessages = errorWithGraphQL.errors.map((e) => e.message).join('\n');
+          console.error('GraphQL Errors:', errorWithGraphQL.errors);
+          toast.error('Failed to create chapter', {
+            description: errorMessages,
+            duration: 10000,
+          });
+          return;
+        }
+        
+        if (error.message.includes('Network')) {
+          toast.error('Network error. Please check your connection and try again.');
+        } else if (error.message.includes('Unauthorized') || error.message.includes('Authentication')) {
+          toast.error('You must be logged in to create a chapter.');
+        } else {
+          toast.error('Failed to create chapter', {
+            description: error.message,
+            duration: 10000,
+          });
+        }
+      } else {
+        toast.error('An unexpected error occurred', {
+          description: String(error),
+          duration: 10000,
+        });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -371,18 +529,22 @@ export default function RegisterChapterModal({
                           value={role.email}
                           onChange={(e) => updateRole(index, 'email', e.target.value)}
                           placeholder="email@example.com"
+                          pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
+                          title="Enter a valid email address"
                         />
                       </div>
 
                       <div>
                         <Label htmlFor={`phone-${index}`}>Phone</Label>
-                        <Input
+                        <PhoneInput
                           id={`phone-${index}`}
-                          type="tel"
                           value={role.phone}
-                          onChange={(e) => updateRole(index, 'phone', e.target.value)}
-                          placeholder="(555) 555-5555"
+                          onChange={(value) => updateRole(index, 'phone', value || '')}
+                          placeholder="Enter phone number"
                         />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          International format with country code
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -400,8 +562,11 @@ export default function RegisterChapterModal({
                 </p>
                 <textarea
                   id="admin-notes"
+                  value={adminNotes}
+                  onChange={(e) => setAdminNotes(e.target.value)}
                   placeholder="Enter your contact information and any additional context for reviewers..."
                   className="w-full mt-1 p-2 border border-border rounded-md bg-background min-h-[100px]"
+                  required
                 />
               </div>
             </div>
@@ -418,8 +583,8 @@ export default function RegisterChapterModal({
               >
                 Cancel
               </Button>
-              <Button type="submit">
-                Submit Registration
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Submitting...' : 'Submit Registration'}
               </Button>
             </div>
           </form>

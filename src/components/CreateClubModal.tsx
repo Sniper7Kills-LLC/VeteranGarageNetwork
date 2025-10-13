@@ -17,7 +17,7 @@ import type { Schema } from '@/../amplify/data/resource';
 interface CreateClubModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: (clubData: { name: string; description: string; clubTypes: string[] }) => void;
+  onSuccess: (clubData: { id: string; name: string; description: string; clubTypes: string[] }) => void;
 }
 
 export default function CreateClubModal({
@@ -111,6 +111,7 @@ export default function CreateClubModal({
 
       // Pass the club data back to parent for any additional handling
       onSuccess({
+        id: newClub.id,
         name: clubName,
         description: clubDescription,
         clubTypes: selectedClubType ? [selectedClubType] : [],
