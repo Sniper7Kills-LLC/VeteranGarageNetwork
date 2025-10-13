@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 
 import { generateClient } from "aws-amplify/data";
-import type { Schema } from "@/amplify/data/resource";
+import type { Schema } from "@/../amplify/data/resource";
 
 const client = generateClient<Schema>()
 const { data: clubs } = await client.models.Club.list()
@@ -47,32 +47,6 @@ interface ClubChapter {
 
 
 // Mock data for clubs
-const mockClubs: Club[] = [
-  {
-    id: 'combat-customs',
-    name: 'Combat Customs',
-    description: 'Custom motorcycle builders and enthusiasts',
-    clubType: ['Military Only', 'Public'],
-  },
-  {
-    id: 'final-call',
-    name: 'Final Call',
-    description: 'Veteran motorcycle club',
-    clubType: ['Military Only', 'First Responders'],
-  },
-  {
-    id: 'hog',
-    name: 'HOG (Harley Owners Group)',
-    description: 'Official Harley-Davidson riding club',
-    clubType: ['Public'],
-  },
-  {
-    id: 'veterans-garage',
-    name: 'Veterans Garage',
-    description: 'Supporting veterans through automotive therapy',
-    clubType: ['Military Only', 'Public'],
-  },
-];
 
 const CLUB_TYPES = ['Public', 'First Responders', 'Military Only', 'LE Only', 'Fire Only'];
 
