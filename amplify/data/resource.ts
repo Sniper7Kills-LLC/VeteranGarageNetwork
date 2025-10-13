@@ -18,18 +18,19 @@ const schema = a.schema({
       
       // Admin & System Fields
       approved: a.boolean().default(false).authorization((allow) => [
+        allow.authenticated().to(['create']),
         allow.groups(['admin']).to(['read', 'update']),
       ]),
       owner: a.string().authorization((allow) => [
         allow.guest().to(['read']),
-        allow.authenticated().to(['read']),
+        allow.authenticated().to(['read', 'create']),
         allow.groups(['admin']).to(['read', 'update'])
       ]),
       
       // Special Notes for Approval
       notes: a.string().authorization((allow)=>[
         allow.groups(['admin']).to(['read', 'update']), 
-        allow.owner().to(['create'])
+        allow.authenticated().to(['create'])
       ]),
       
       // Relationships
