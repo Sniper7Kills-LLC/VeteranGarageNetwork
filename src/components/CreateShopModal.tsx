@@ -31,23 +31,6 @@ interface CreateShopModalProps {
   onSuccess: () => void;
 }
 
-interface ClubAssociation {
-  clubId: string;
-  clubName: string;
-  approved: boolean;
-  relationship: string;
-  details: string;
-}
-
-interface ChapterAssociation {
-  chapterId: string;
-  chapterName: string;
-  clubName: string;
-  approved: boolean;
-  relationship: string;
-  details: string;
-}
-
 export default function CreateShopModal({
   open,
   onOpenChange,
