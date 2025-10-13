@@ -23,4 +23,5 @@ export const auth = defineAuth({
       logoutUrls: ['http://localhost:5173/', 'https://veterangaragenetwork.com', 'https://www.veterangaragenetwork.com'],
     }
   },
+  groups: ['admin'],
 });

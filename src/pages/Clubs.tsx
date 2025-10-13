@@ -26,6 +26,9 @@ type Club = Schema['Club']['type'];
  * AWS Amplify End
  */
 
+// Import club types from centralized config
+import { CLUB_TYPE_VALUES } from '@/../amplify/config/enums';
+
 interface ChapterRole {
   id: string;
   roleTitle: string;
@@ -50,10 +53,6 @@ interface ClubChapter {
 }
 
 
-
-// Mock data for clubs
-
-const CLUB_TYPES = ['Public', 'First Responders', 'Military Only', 'LE Only', 'Fire Only'];
 
 // Mock data for club chapters
 const mockChapters: ClubChapter[] = [
@@ -212,7 +211,7 @@ function ClubsSidebar({
       <div className="p-4 border border-border rounded-lg bg-card">
         <h3 className="font-semibold mb-3">Filter by Club Type</h3>
         <div className="space-y-3">
-          {CLUB_TYPES.map((type) => (
+          {CLUB_TYPE_VALUES.map((type) => (
             <div key={type} className="flex items-center space-x-2">
               <Checkbox
                 id={`type-${type}`}
@@ -284,11 +283,11 @@ export default function Clubs() {
 
       // Check if the club has any of the selected types
       const club = clubs?.find((c) => c.id === chapter.clubId);
-      if (!club || !club.clubType) {
+      if (!club || !club.type) {
         return false;
       }
 
-      return club.clubType.some((type) => type && selectedClubTypes.has(type));
+      return selectedClubTypes.has(club.type);
     });
   }, [selectedClubIds, selectedClubTypes]);
 

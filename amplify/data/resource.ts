@@ -1,4 +1,5 @@
 import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
+import { CLUB_TYPE_VALUES } from '../config/enums';
 
 /*== STEP 1 ===============================================================
 The section below creates a Todo database table with a "content" field. Try
@@ -9,11 +10,27 @@ and "delete" any "Todo" records.
 const schema = a.schema({
   Club: a
     .model({
+      // Basic Fields
+      id: a.id().required(),
       name: a.string().required(),
       description: a.string(),
-      clubType: a.string().array(),
-      approved: a.boolean().default(false),
-      owner: a.string(),
+      type: a.enum(CLUB_TYPE_VALUES),
+      
+      // Admin & System Fields
+      approved: a.boolean().default(false).authorization((allow) => [
+        allow.groups(['admin']).to(['read', 'update']),
+      ]),
+      owner: a.string().authorization((allow) => [
+        allow.groups(['admin']).to(['read', 'update'])
+      ]),
+      
+      // Special Notes for Approval
+      notes: a.string().authorization((allow)=>[
+        allow.groups(['admin']).to(['read', 'update']), 
+        allow.owner().to(['create'])
+      ]),
+      
+      // Relationships
       chapters: a.hasMany('ClubChapter', 'clubId'),
       //shopAssociations: a.hasMany('ClubAssociation', 'clubId'),
     })
@@ -24,17 +41,35 @@ const schema = a.schema({
 
   ClubChapter: a
     .model({
-      clubId: a.id().required(),
-      club: a.belongsTo('Club', 'clubId'),
-      clubName: a.string().required(),
+      // Basic Fields
+      id: a.id().required(),      
       name: a.string().required(),
       description: a.string(),
       address: a.string(),
       city: a.string(),
       state: a.string(),
       zipCode: a.string(),
+      // Required for Map Placement
       latitude: a.float().required(),
       longitude: a.float().required(),
+
+      // Admin & System Fields
+      approved: a.boolean().default(false).authorization((allow) => [
+        allow.groups(['admin']).to(['read', 'update']),
+      ]),
+      owner: a.string().authorization((allow) => [
+        allow.groups(['admin']).to(['read', 'update'])
+      ]),
+
+      // Special Notes for Approval
+      notes: a.string().authorization((allow)=>[
+        allow.groups(['admin']).to(['read', 'update']), 
+        allow.owner().to(['create'])
+      ]),
+
+      // Relationships
+      clubId: a.id().required(),
+      club: a.belongsTo('Club', 'clubId'),
       roles: a.hasMany('ChapterRole', 'chapterId'),
     })
     .authorization((allow) => [
@@ -44,12 +79,25 @@ const schema = a.schema({
 
   ChapterRole: a
     .model({
-      chapterId: a.id().required(),
-      chapter: a.belongsTo('ClubChapter', 'chapterId'),
+      // Basic Fields
+      id: a.id().required(),    
       roleTitle: a.string().required(),
       personName: a.string().required(),
-      email: a.email().authorization((allow)=> [allow.authenticated().to(['read'])]),
-      phone: a.phone().authorization((allow)=> [allow.authenticated().to(['read'])]),
+      email: a.email().authorization((allow)=> [
+        allow.authenticated().to(['read', 'create'])
+      ]),
+      phone: a.phone().authorization((allow)=> [
+        allow.authenticated().to(['read', 'create'])
+      ]),
+
+      // Admin & System Fields
+      owner: a.string().authorization((allow) => [
+        allow.groups(['admin']).to(['read', 'update'])
+      ]),
+
+      // Relationships
+      chapterId: a.id().required(),
+      chapter: a.belongsTo('ClubChapter', 'chapterId'),
     })
     .authorization((allow) => [
       allow.guest().to(['read']),

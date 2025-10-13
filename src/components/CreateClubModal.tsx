@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 
-const CLUB_TYPES = ['Public', 'First Responders', 'Military Only', 'LE Only', 'Fire Only'];
+import { CLUB_TYPE_VALUES } from '@/../amplify/config/enums';
 
 interface CreateClubModalProps {
   open: boolean;
@@ -97,7 +97,7 @@ export default function CreateClubModal({
           <div>
             <Label>Club Types</Label>
             <div className="space-y-2 mt-2">
-              {CLUB_TYPES.map((type) => (
+              {CLUB_TYPE_VALUES.map((type) => (
                 <div key={type} className="flex items-center space-x-2">
                   <Checkbox
                     id={`create-club-type-${type}`}
