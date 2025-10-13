@@ -88,3 +88,58 @@ export const ASSOCIATION_RELATIONSHIP_DESCRIPTIONS: Record<string, string> = {
   'Supporter': 'Actively supports the organization through various means',
   'Other': 'Custom relationship type not covered by standard categories'
 };
+
+// Event Categories
+export const EVENT_CATEGORY_VALUES = [
+  'Meetup',
+  'Ride', 
+  'Show',
+  'Workshop',
+  'Parade'
+] as const;
+
+export type EventCategory = typeof EVENT_CATEGORY_VALUES[number];
+
+export const EVENT_CATEGORY_DESCRIPTIONS: Record<string, string> = {
+  'Meetup': 'Casual gatherings, coffee meets, and social events',
+  'Ride': 'Group rides with planned routes and waypoints',
+  'Show': 'Vehicle shows, exhibitions, and display events',
+  'Workshop': 'Educational workshops, training sessions, and skill-building events',
+  'Parade': 'Parades, ceremonies, and commemorative events'
+};
+
+// Event-Chapter Relationship Types
+export const EVENT_RELATIONSHIP_VALUES = [
+  'Hosted_By',
+  'Sponsored_By',
+  'Supported_By',
+  'Affiliated_With',
+  'Other',
+] as const;
+
+export type EventRelationship = typeof EVENT_RELATIONSHIP_VALUES[number];
+
+export const EVENT_RELATIONSHIP_DESCRIPTIONS: Record<string, string> = {
+  'Hosted_By': 'Chapter is the primary organizer and host of this event',
+  'Sponsored_By': 'Chapter provides financial or material sponsorship',
+  'Supported_By': 'Chapter actively supports and promotes this event',
+  'Affiliated_With': 'Chapter is officially associated with this event',
+  'Other': 'Custom relationship type not covered by standard categories'
+};
+
+// Route Point Types
+export const ROUTE_POINT_TYPE_VALUES = [
+  'Start',
+  'End',
+  'Stop',
+  'Join_In'
+] as const;
+
+export type RoutePointType = typeof ROUTE_POINT_TYPE_VALUES[number];
+
+export const ROUTE_POINT_TYPE_DESCRIPTIONS: Record<string, string> = {
+  'Start': 'Starting point of the route',
+  'End': 'Final destination of the route',
+  'Stop': 'Planned stop or waypoint along the route',
+  'Join_In': 'Point where additional riders can join the group'
+};
