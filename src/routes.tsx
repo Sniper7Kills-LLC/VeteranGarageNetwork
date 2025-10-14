@@ -1,6 +1,7 @@
 import { createBrowserRouter } from 'react-router-dom';
 import { lazy } from 'react';
 import MainLayout from './components/layouts/MainLayout';
+import ProtectedRoute from './components/ProtectedRoute';
 
 export const router = createBrowserRouter([
   {
@@ -33,7 +34,22 @@ export const router = createBrowserRouter([
       },
       {
         path: 'events',
-        Component: lazy(() => import('./pages/Events')),
+        children: [
+          {
+            index: true,
+            Component: lazy(() => import('./pages/Events')),
+          },
+          {
+            path: 'create',
+            element: <ProtectedRoute />,
+            children: [
+              {
+                index: true,
+                Component: lazy(() => import('./pages/CreateEvent')),
+              },
+            ],
+          },
+        ],
       },
       {
         path: 'profile',

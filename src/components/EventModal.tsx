@@ -37,7 +37,9 @@ export default function EventModal({ event, isOpen, onClose }: EventModalProps) 
   
   // Format date for display
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
+    // Parse the date string (YYYY-MM-DD format) and create date at noon to avoid timezone issues
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day, 12, 0, 0);
     return date.toLocaleDateString('en-US', { 
       weekday: 'long', 
       year: 'numeric', 

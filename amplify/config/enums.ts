@@ -131,8 +131,10 @@ export const EVENT_RELATIONSHIP_DESCRIPTIONS: Record<string, string> = {
 export const ROUTE_POINT_TYPE_VALUES = [
   'Start',
   'End',
+  'Waypoint',
   'Stop',
-  'Join_In'
+  'Join_In',
+  'Blockers'
 ] as const;
 
 export type RoutePointType = typeof ROUTE_POINT_TYPE_VALUES[number];
@@ -140,6 +142,8 @@ export type RoutePointType = typeof ROUTE_POINT_TYPE_VALUES[number];
 export const ROUTE_POINT_TYPE_DESCRIPTIONS: Record<string, string> = {
   'Start': 'Starting point of the route',
   'End': 'Final destination of the route',
-  'Stop': 'Planned stop or waypoint along the route',
-  'Join_In': 'Point where additional riders can join the group'
+  'Waypoint': 'Generic waypoint along the route',
+  'Stop': 'Planned stop location (gas, food, rest)',
+  'Join_In': 'Point where additional riders can join the group',
+  'Blockers': 'Location where traffic control blockers will be deployed'
 };

@@ -23,6 +23,7 @@ interface Event {
   lat: number;
   lng: number;
   route?: [number, number][];
+  approved?: boolean;
 }
 
 interface DayEventsModalProps {
@@ -39,7 +40,15 @@ export default function DayEventsModal({ date, events, isOpen, onClose, onEventC
   if (!date) return null;
   
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { 
+    // Use UTC methods to avoid timezone offset issues
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const day = date.getDate();
+    
+    // Create a new date at noon to avoid timezone issues
+    const safeDate = new Date(year, month, day, 12, 0, 0);
+    
+    return safeDate.toLocaleDateString('en-US', { 
       weekday: 'long', 
       year: 'numeric', 
       month: 'long', 
@@ -120,8 +129,11 @@ export default function DayEventsModal({ date, events, isOpen, onClose, onEventC
                       onEventClick(event);
                       onClose();
                     }}
-                    className="w-full h-auto p-4 text-left justify-start hover:bg-accent"
+                    className="w-full h-auto p-4 text-left justify-start hover:bg-accent relative"
                   >
+                    {event.approved === false && (
+                      <Badge variant="destructive" className="absolute top-2 right-2 h-2 w-2 p-0 rounded-full" />
+                    )}
                     <div className="flex gap-4 w-full">
                       {event.images && event.images.length > 0 && (
                         <img 
@@ -131,9 +143,16 @@ export default function DayEventsModal({ date, events, isOpen, onClose, onEventC
                         />
                       )}
                       <div className="flex-1 min-w-0">
-                        <Badge className="mb-2 bg-primary/10 text-primary hover:bg-primary/10">
-                          {event.category}
-                        </Badge>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge className="bg-primary/10 text-primary hover:bg-primary/10">
+                            {event.category}
+                          </Badge>
+                          {event.approved === false && (
+                            <Badge variant="destructive" className="text-xs">
+                              Unapproved
+                            </Badge>
+                          )}
+                        </div>
                         <h3 className="font-semibold mb-2">{event.title}</h3>
                         <div className="space-y-1 text-sm text-muted-foreground">
                           <div className="flex items-center gap-2">

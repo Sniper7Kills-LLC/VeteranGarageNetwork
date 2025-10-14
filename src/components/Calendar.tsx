@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface Event {
   id: string;
@@ -12,6 +13,7 @@ interface Event {
   lat: number;
   lng: number;
   route?: [number, number][];
+  approved?: boolean;
 }
 
 interface CalendarProps {
@@ -105,7 +107,7 @@ export default function Calendar({
       >
         {/* Day number - clickable if there are events */}
         <button
-          onClick={() => dayEvents.length > 0 && onViewAllClick(new Date(year, month, day))}
+          onClick={() => dayEvents.length > 0 && onViewAllClick(new Date(year, month, day, 12, 0, 0))}
           className={`text-sm font-semibold mb-1 text-left ${
             isToday ? 'text-primary' : ''
           } ${
@@ -123,9 +125,12 @@ export default function Calendar({
             <button
               key={event.id}
               onClick={() => onEventClick(event)}
-              className="w-full text-left px-2 py-1 text-xs rounded bg-primary/10 hover:bg-primary/20 transition-colors truncate"
-              title={`${event.time} - ${event.title}`}
+              className="w-full text-left px-2 py-1 text-xs rounded bg-primary/10 hover:bg-primary/20 transition-colors truncate relative"
+              title={`${event.time} - ${event.title}${event.approved === false ? ' (Unapproved)' : ''}`}
             >
+              {event.approved === false && (
+                <Badge variant="destructive" className="absolute -top-1 -right-1 h-2 w-2 p-0 rounded-full" />
+              )}
               <div className="font-medium truncate">{event.title}</div>
               <div className="text-muted-foreground truncate">{event.time}</div>
             </button>
@@ -134,7 +139,7 @@ export default function Calendar({
           {/* View all button */}
           {hasMoreEvents && (
             <button
-              onClick={() => onViewAllClick(new Date(year, month, day))}
+              onClick={() => onViewAllClick(new Date(year, month, day, 12, 0, 0))}
               className="w-full text-xs text-primary hover:underline text-left px-2 py-1"
             >
               +{dayEvents.length - maxEventsToShow} more
