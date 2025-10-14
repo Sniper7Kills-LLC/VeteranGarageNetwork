@@ -1,6 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { useAuthenticator } from '@aws-amplify/ui-react';
 import { generateClient } from 'aws-amplify/data';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import type { Schema } from '@/../amplify/data/resource';
@@ -16,7 +15,6 @@ const client = generateClient<Schema>();
 export default function EditEvent() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { authStatus } = useAuthenticator((context) => [context.authStatus]);
   const [loading, setLoading] = useState(true);
   const [event, setEvent] = useState<EventFormData | null>(null);
   const [error, setError] = useState<string | null>(null);

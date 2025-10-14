@@ -441,7 +441,7 @@ export default function Profile() {
         { id: shopId },
         { 
           authMode: 'userPool',
-          selectionSet: ['id', 'name', 'description', 'address', 'city', 'state', 'zipCode', 'latitude', 'longitude', 'phone', 'email', 'website', 'services', 'clubAssociations.*']
+          selectionSet: ['id', 'name', 'description', 'address', 'city', 'state', 'zipCode', 'latitude', 'longitude', 'phone', 'email', 'website', 'services', 'approved', 'clubAssociations.*']
         }
       );
       
@@ -509,7 +509,7 @@ export default function Profile() {
           { id: selectedChapter.id },
           { 
             authMode: 'userPool',
-            selectionSet: ['id', 'name', 'description', 'website', 'address', 'city', 'state', 'latitude', 'longitude', 'clubId', 'roles.*']
+            selectionSet: ['id', 'name', 'description', 'website', 'address', 'city', 'state', 'latitude', 'longitude', 'clubId', 'approved', 'roles.*']
           }
         );
         
@@ -550,7 +550,7 @@ export default function Profile() {
           { id: selectedShop.id },
           { 
             authMode: 'userPool',
-            selectionSet: ['id', 'name', 'description', 'address', 'city', 'state', 'zipCode', 'latitude', 'longitude', 'phone', 'email', 'website', 'services', 'clubAssociations.*']
+            selectionSet: ['id', 'name', 'description', 'address', 'city', 'state', 'zipCode', 'latitude', 'longitude', 'phone', 'email', 'website', 'services', 'approved', 'clubAssociations.*']
           }
         );
         
