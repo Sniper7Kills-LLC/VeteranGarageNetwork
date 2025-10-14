@@ -43,15 +43,15 @@ const schema = a.schema({
       owners: a.string().array().authorization((allow) => [
         allow.guest().to(['read']),
         allow.authenticated().to(['read', 'create']),
-        allow.ownersDefinedIn('owners').to(['read','update']),
-        allow.groups(['admin']).to(['read', 'update'])
+        allow.ownersDefinedIn('owners').to(['read', 'update', 'delete']),
+        allow.groups(['admin']).to(['read', 'update', 'delete'])
       ]),
       
       // Special Notes for Approval
       notes: a.string().authorization((allow)=>[
         allow.authenticated().to(['create']),
-        allow.ownersDefinedIn('owners').to(['read','update']),
-        allow.groups(['admin']).to(['read', 'update']),
+        allow.ownersDefinedIn('owners').to(['read', 'update', 'delete']),
+        allow.groups(['admin']).to(['read', 'update', 'delete']),
       ]),
       
       // Relationships
@@ -60,8 +60,9 @@ const schema = a.schema({
     })
     .authorization((allow) => [
       allow.guest().to(['read']),
-      allow.ownersDefinedIn('owners').to(['read','update']),
-      allow.authenticated().to(['read','create']),
+      allow.authenticated().to(['read', 'create']),
+      allow.ownersDefinedIn('owners').to(['read', 'update', 'delete']),
+      allow.groups(['admin']).to(['read', 'update', 'delete']),
     ]),
 
   ClubChapter: a
@@ -90,15 +91,15 @@ const schema = a.schema({
       owners: a.string().array().authorization((allow) => [
         allow.guest().to(['read']),
         allow.authenticated().to(['read', 'create']),
-        allow.ownersDefinedIn('owners').to(['read','update']),
-        allow.groups(['admin']).to(['read', 'update'])
+        allow.ownersDefinedIn('owners').to(['read', 'update', 'delete']),
+        allow.groups(['admin']).to(['read', 'update', 'delete'])
       ]),
 
       // Special Notes for Approval
       notes: a.string().authorization((allow)=>[
-        allow.groups(['admin']).to(['read', 'update']),
-        allow.ownersDefinedIn('owners').to(['read','update']),
-        allow.authenticated().to(['create'])
+        allow.authenticated().to(['create']),
+        allow.ownersDefinedIn('owners').to(['read', 'update', 'delete']),
+        allow.groups(['admin']).to(['read', 'update', 'delete']),
       ]),
 
       // Relationships
@@ -110,8 +111,9 @@ const schema = a.schema({
     })
     .authorization((allow) => [
       allow.guest().to(['read']),
-      allow.ownersDefinedIn('owners').to(['read','update']),
-      allow.authenticated().to(['read','create']),
+      allow.authenticated().to(['read', 'create']),
+      allow.ownersDefinedIn('owners').to(['read', 'update', 'delete']),
+      allow.groups(['admin']).to(['read', 'update', 'delete']),
     ]),
 
   ChapterRole: a
@@ -122,19 +124,21 @@ const schema = a.schema({
       personName: a.string().required(),
       email: a.email().authorization((allow)=> [
         allow.authenticated().to(['read', 'create']),
-        allow.ownersDefinedIn('owners').to(['read','update']),
+        allow.ownersDefinedIn('owners').to(['read', 'update', 'delete']),
+        allow.groups(['admin']).to(['read', 'update', 'delete']),
       ]),
       phone: a.phone().authorization((allow)=> [
         allow.authenticated().to(['read', 'create']),
-        allow.ownersDefinedIn('owners').to(['read','update']),
+        allow.ownersDefinedIn('owners').to(['read', 'update', 'delete']),
+        allow.groups(['admin']).to(['read', 'update', 'delete']),
       ]),
 
       // Admin & System Fields
       owner: a.string().authorization((allow) => [
         allow.guest().to(['read']),
         allow.authenticated().to(['read']),
-        allow.ownersDefinedIn('owners').to(['read','update']),
-        allow.groups(['admin']).to(['read', 'update'])
+        allow.ownersDefinedIn('owners').to(['read', 'update', 'delete']),
+        allow.groups(['admin']).to(['read', 'update', 'delete'])
       ]),
 
       // Relationships
@@ -143,8 +147,9 @@ const schema = a.schema({
     })
     .authorization((allow) => [
       allow.guest().to(['read']),
-      allow.authenticated().to(['read','create']),
-      allow.ownersDefinedIn('owners').to(['read','update']),
+      allow.authenticated().to(['read', 'create']),
+      allow.ownersDefinedIn('owners').to(['read', 'update', 'delete']),
+      allow.groups(['admin']).to(['read', 'update', 'delete']),
     ]),
 
   // ============================================================================
@@ -185,15 +190,15 @@ const schema = a.schema({
       owners: a.string().array().authorization((allow) => [
         allow.guest().to(['read']),
         allow.authenticated().to(['read', 'create']),
-        allow.ownersDefinedIn('owners').to(['read','update']),
-        allow.groups(['admin']).to(['read', 'update'])
+        allow.ownersDefinedIn('owners').to(['read', 'update', 'delete']),
+        allow.groups(['admin']).to(['read', 'update', 'delete'])
       ]),
       
       // Special Notes for Approval
       notes: a.string().authorization((allow)=>[
         allow.authenticated().to(['create']),
-        allow.ownersDefinedIn('owners').to(['read','update']),
-        allow.groups(['admin']).to(['read', 'update']), 
+        allow.ownersDefinedIn('owners').to(['read', 'update', 'delete']),
+        allow.groups(['admin']).to(['read', 'update', 'delete']), 
       ]),
       
       // Relationships
@@ -202,8 +207,9 @@ const schema = a.schema({
     })
     .authorization((allow) => [
       allow.guest().to(['read']),
-      allow.authenticated().to(['read','create']),
-      allow.ownersDefinedIn('owners').to(['read','update']),
+      allow.authenticated().to(['read', 'create']),
+      allow.ownersDefinedIn('owners').to(['read', 'update', 'delete']),
+      allow.groups(['admin']).to(['read', 'update', 'delete']),
     ]),
 
   ClubAssociation: a
@@ -221,9 +227,9 @@ const schema = a.schema({
       
       // Special Notes for Approval
       notes: a.string().authorization((allow)=>[
-        allow.groups(['admin']).to(['read', 'update']),
-        allow.ownersDefinedIn('owners').to(['read','update']),
-        allow.authenticated().to(['create'])
+        allow.authenticated().to(['create']),
+        allow.owner().to(['read', 'update', 'delete']),
+        allow.groups(['admin']).to(['read', 'update', 'delete']),
       ]),
       
       // Relationships
@@ -233,9 +239,10 @@ const schema = a.schema({
       club: a.belongsTo('Club', 'clubId'),
     })
     .authorization((allow) => [
-      allow.owner(), // Automatically creates and manages 'owner' field with user's sub
       allow.guest().to(['read']),
-      allow.authenticated().to(['read','create']),
+      allow.authenticated().to(['read', 'create']),
+      allow.owner().to(['read', 'update', 'delete']),
+      allow.groups(['admin']).to(['read', 'update', 'delete']),
     ]),
 
   ChapterAssociation: a
@@ -254,8 +261,9 @@ const schema = a.schema({
       
       // Special Notes for Approval
       notes: a.string().authorization((allow)=>[
-        allow.groups(['admin']).to(['read', 'update']), 
-        allow.authenticated().to(['create'])
+        allow.authenticated().to(['create']),
+        allow.owner().to(['read', 'update', 'delete']),
+        allow.groups(['admin']).to(['read', 'update', 'delete']), 
       ]),
       
       // Relationships
@@ -265,9 +273,10 @@ const schema = a.schema({
       chapter: a.belongsTo('ClubChapter', 'chapterId'),
     })
     .authorization((allow) => [
-      allow.owner(), // Automatically creates and manages 'owner' field with user's sub
       allow.guest().to(['read']),
-      allow.authenticated().to(['read','create']),
+      allow.authenticated().to(['read', 'create']),
+      allow.owner().to(['read', 'update', 'delete']),
+      allow.groups(['admin']).to(['read', 'update', 'delete']),
     ]),
 
   // ============================================================================
@@ -309,15 +318,15 @@ const schema = a.schema({
       owners: a.string().array().authorization((allow) => [
         allow.guest().to(['read']),
         allow.authenticated().to(['read', 'create']),
-        allow.ownersDefinedIn('owners').to(['read','update']),
-        allow.groups(['admin']).to(['read', 'update'])
+        allow.ownersDefinedIn('owners').to(['read', 'update', 'delete']),
+        allow.groups(['admin']).to(['read', 'update', 'delete'])
       ]),
       
       // Special Notes for Approval
       notes: a.string().authorization((allow)=>[
         allow.authenticated().to(['create']),
-        allow.ownersDefinedIn('owners').to(['read','update']),
-        allow.groups(['admin']).to(['read', 'update']), 
+        allow.ownersDefinedIn('owners').to(['read', 'update', 'delete']),
+        allow.groups(['admin']).to(['read', 'update', 'delete']), 
       ]),
       
       // Relationships
@@ -325,8 +334,9 @@ const schema = a.schema({
     })
     .authorization((allow) => [
       allow.guest().to(['read']),
-      allow.authenticated().to(['read','create']),
-      allow.ownersDefinedIn('owners').to(['read','update']),
+      allow.authenticated().to(['read', 'create']),
+      allow.ownersDefinedIn('owners').to(['read', 'update', 'delete']),
+      allow.groups(['admin']).to(['read', 'update', 'delete']),
     ]),
 
   EventChapterAssociation: a
@@ -347,8 +357,9 @@ const schema = a.schema({
       
       // Special Notes for Approval
       notes: a.string().authorization((allow)=>[
-        allow.groups(['admin']).to(['read', 'update']), 
-        allow.authenticated().to(['create'])
+        allow.authenticated().to(['create']),
+        allow.owner().to(['read', 'update', 'delete']),
+        allow.groups(['admin']).to(['read', 'update', 'delete']), 
       ]),
       
       // Relationships
@@ -358,9 +369,10 @@ const schema = a.schema({
       chapter: a.belongsTo('ClubChapter', 'chapterId'),
     })
     .authorization((allow) => [
-      allow.owner(), // Automatically creates and manages 'owner' field with user's sub
       allow.guest().to(['read']),
-      allow.authenticated().to(['read','create']),
+      allow.authenticated().to(['read', 'create']),
+      allow.owner().to(['read', 'update', 'delete']),
+      allow.groups(['admin']).to(['read', 'update', 'delete']),
     ]),
 });
 

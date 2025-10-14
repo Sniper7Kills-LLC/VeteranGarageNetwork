@@ -403,7 +403,7 @@ export default function Profile() {
         { id: chapterId },
         { 
           authMode: 'userPool',
-          selectionSet: ['id', 'name', 'description', 'website', 'address', 'city', 'state', 'latitude', 'longitude', 'clubId', 'roles.*']
+          selectionSet: ['id', 'name', 'description', 'website', 'address', 'city', 'state', 'zipCode', 'latitude', 'longitude', 'clubId', 'owners', 'roles.*']
         }
       );
       

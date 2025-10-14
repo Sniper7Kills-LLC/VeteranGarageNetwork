@@ -84,11 +84,11 @@ export default function ShopModal({
         email: formData.email || null,
         website: formData.website || null,
         services: formData.services && formData.services.length > 0 ? formData.services : null,
-      });
+      }, { authMode: 'userPool' });
 
       // Delete existing club associations
       const deletePromises = shop.clubAssociations.map(assoc =>
-        client.models.ClubAssociation.delete({ id: assoc.id })
+        client.models.ClubAssociation.delete({ id: assoc.id }, { authMode: 'userPool' })
       );
       await Promise.all(deletePromises);
 

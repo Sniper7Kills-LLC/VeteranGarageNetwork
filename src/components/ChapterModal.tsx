@@ -37,6 +37,7 @@ interface ClubChapter {
   latitude: number;
   longitude: number;
   roles: ChapterRole[];
+  owners?: string[];
 }
 
 interface ChapterModalProps {
@@ -68,7 +69,7 @@ export default function ChapterModal({
     if (!chapter) return;
 
     try {
-      // Update chapter
+      // Update chapter - include owners to maintain authorization
       await client.models.ClubChapter.update({
         id: chapter.id,
         name: formData.name,
@@ -80,11 +81,12 @@ export default function ChapterModal({
         zipCode: formData.zipCode || null,
         latitude: formData.latitude,
         longitude: formData.longitude,
-      });
+        owners: chapter.owners || [], // Include owners to maintain authorization
+      }, { authMode: 'userPool' });
 
       // Delete existing roles
       const deletePromises = chapter.roles.map(role =>
-        client.models.ChapterRole.delete({ id: role.id })
+        client.models.ChapterRole.delete({ id: role.id }, { authMode: 'userPool' })
       );
       await Promise.all(deletePromises);
 

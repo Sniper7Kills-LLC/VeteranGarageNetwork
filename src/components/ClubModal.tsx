@@ -60,7 +60,7 @@ export default function ClubModal({
         name: formData.name,
         description: formData.description || null,
         type: formData.type || null,
-      });
+      }, { authMode: 'userPool' });
 
       toast.success('Club updated successfully!');
       setEditMode(false);
