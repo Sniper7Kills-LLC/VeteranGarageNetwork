@@ -14,6 +14,7 @@ import CreateClubModal from './CreateClubModal';
 import LocationPickerMap from './LocationPickerMap';
 
 import { generateClient } from 'aws-amplify/data';
+import { fetchAuthSession } from 'aws-amplify/auth';
 import type { Schema } from '@/../amplify/data/resource';
 
 /**
@@ -160,6 +161,14 @@ export default function RegisterChapterModal({
     setIsSubmitting(true);
 
     try {
+      // Get current user's identity
+      const session = await fetchAuthSession();
+      const userId = session.tokens?.idToken?.payload.sub as string;
+
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
       const client = generateClient<Schema>();
       
       // Prepare chapter data
@@ -175,12 +184,14 @@ export default function RegisterChapterModal({
         latitude: number;
         longitude: number;
         notes: string;
+        owners: string[];
       } = {
         clubId: clubIdToUse,
         name: chapterName.trim(),
         latitude: lat,
         longitude: lng,
         notes: adminNotes.trim(),
+        owners: [userId],
       };
 
       // Add optional fields

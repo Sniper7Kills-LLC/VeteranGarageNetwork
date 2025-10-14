@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Trash2 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
-import { ROUTE_POINT_TYPE_VALUES, ROUTE_POINT_TYPE_DESCRIPTIONS } from '@/../amplify/config/enums';
+import { ROUTE_POINT_TYPE_VALUES } from '@/../amplify/config/enums';
 
 // Fix for default marker icons in react-leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';

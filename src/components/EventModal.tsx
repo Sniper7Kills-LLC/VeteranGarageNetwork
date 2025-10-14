@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Calendar, Clock, MapPin, Map as MapIcon, ArrowLeft } from 'lucide-react';
+import { getUrl } from 'aws-amplify/storage';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,10 +31,50 @@ interface EventModalProps {
   event: Event | null;
   isOpen: boolean;
   onClose: () => void;
+  isOwner?: boolean;
 }
 
-export default function EventModal({ event, isOpen, onClose }: EventModalProps) {
+export default function EventModal({ event, isOpen, onClose, isOwner = false }: EventModalProps) {
+  const navigate = useNavigate();
   const [showMap, setShowMap] = useState(false);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [loadingImages, setLoadingImages] = useState(false);
+
+  // Fetch S3 URLs for images when event changes
+  useEffect(() => {
+    const fetchImageUrls = async () => {
+      if (!event?.images || event.images.length === 0) {
+        setImageUrls([]);
+        return;
+      }
+
+      setLoadingImages(true);
+      try {
+        const urlPromises = event.images.map(async (imagePath) => {
+          // Check if it's already a full URL (for backward compatibility)
+          if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+            return imagePath;
+          }
+          
+          // Otherwise, fetch from S3
+          const result = await getUrl({
+            path: imagePath,
+          });
+          return result.url.toString();
+        });
+
+        const urls = await Promise.all(urlPromises);
+        setImageUrls(urls);
+      } catch (error) {
+        console.error('Error fetching image URLs:', error);
+        setImageUrls([]);
+      } finally {
+        setLoadingImages(false);
+      }
+    };
+
+    fetchImageUrls();
+  }, [event?.images]);
   
   if (!event) return null;
   
@@ -63,6 +106,13 @@ export default function EventModal({ event, isOpen, onClose }: EventModalProps) 
     setShowMap(false);
     onClose();
   };
+
+  const handleManageClick = () => {
+    if (event) {
+      onClose();
+      navigate(`/events/edit/${event.id}`);
+    }
+  };
   
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -70,24 +120,30 @@ export default function EventModal({ event, isOpen, onClose }: EventModalProps) 
         {!showMap ? (
           <>
             {/* Images */}
-            {event.images && event.images.length > 0 && (
+            {imageUrls.length > 0 && (
               <div className="w-full">
-                <img 
-                  src={event.images[0]} 
-                  alt={event.title}
-                  className="w-full h-64 object-cover rounded-t-lg"
-                />
-                {event.images.length > 1 && (
-                  <div className="grid grid-cols-3 gap-2 p-4">
-                    {event.images.slice(1).map((img, idx) => (
-                      <img 
-                        key={idx}
-                        src={img} 
-                        alt={`${event.title} ${idx + 2}`}
-                        className="w-full h-24 object-cover rounded-lg"
-                      />
-                    ))}
-                  </div>
+                {loadingImages ? (
+                  <div className="w-full h-64 bg-muted animate-pulse rounded-t-lg" />
+                ) : (
+                  <>
+                    <img 
+                      src={imageUrls[0]} 
+                      alt={event.title}
+                      className="w-full h-64 object-cover rounded-t-lg"
+                    />
+                    {imageUrls.length > 1 && (
+                      <div className="grid grid-cols-3 gap-2 p-4">
+                        {imageUrls.slice(1).map((url, idx) => (
+                          <img 
+                            key={idx}
+                            src={url} 
+                            alt={`${event.title} ${idx + 2}`}
+                            className="w-full h-24 object-cover rounded-lg"
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}
@@ -141,6 +197,14 @@ export default function EventModal({ event, isOpen, onClose }: EventModalProps) 
                 </Button>
               )}
             </div>
+
+            {isOwner && (
+              <DialogFooter className="px-6 pb-6">
+                <Button onClick={handleManageClick} className="w-full">
+                  Manage Event
+                </Button>
+              </DialogFooter>
+            )}
           </>
         ) : (
           /* Map View */

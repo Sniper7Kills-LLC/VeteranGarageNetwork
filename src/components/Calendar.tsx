@@ -101,14 +101,14 @@ export default function Calendar({
     calendarDays.push(
       <div
         key={day}
-        className={`min-h-32 border border-border bg-card p-2 flex flex-col ${
-          isToday ? 'ring-2 ring-primary' : ''
+        className={`min-h-16 sm:min-h-24 md:min-h-32 border border-border bg-card p-1 sm:p-2 flex flex-col ${
+          isToday ? 'ring-1 sm:ring-2 ring-primary' : ''
         }`}
       >
         {/* Day number - clickable if there are events */}
         <button
           onClick={() => dayEvents.length > 0 && onViewAllClick(new Date(year, month, day, 12, 0, 0))}
-          className={`text-sm font-semibold mb-1 text-left ${
+          className={`text-xs sm:text-sm font-semibold mb-0.5 sm:mb-1 text-left ${
             isToday ? 'text-primary' : ''
           } ${
             dayEvents.length > 0 ? 'hover:underline cursor-pointer' : 'cursor-default'
@@ -119,67 +119,94 @@ export default function Calendar({
           {day}
         </button>
         
-        {/* Events list */}
-        <div className="flex-1 space-y-1 overflow-hidden">
-          {eventsToDisplay.map(event => (
-            <button
-              key={event.id}
-              onClick={() => onEventClick(event)}
-              className="w-full text-left px-2 py-1 text-xs rounded bg-primary/10 hover:bg-primary/20 transition-colors truncate relative"
-              title={`${event.time} - ${event.title}${event.approved === false ? ' (Unapproved)' : ''}`}
-            >
-              {event.approved === false && (
-                <Badge variant="destructive" className="absolute -top-1 -right-1 h-2 w-2 p-0 rounded-full" />
-              )}
-              <div className="font-medium truncate">{event.title}</div>
-              <div className="text-muted-foreground truncate">{event.time}</div>
-            </button>
-          ))}
+        {/* Event indicator for mobile - show dots instead of full events */}
+        <div className="flex-1 overflow-hidden">
+          {/* Mobile view: Show dots for events */}
+          <div className="sm:hidden flex flex-wrap gap-0.5">
+            {dayEvents.slice(0, 6).map((event) => (
+              <button
+                key={event.id}
+                onClick={() => onEventClick(event)}
+                className={`w-1.5 h-1.5 rounded-full ${
+                  event.approved === false ? 'bg-destructive' : 'bg-primary'
+                }`}
+                title={`${event.time} - ${event.title}${event.approved === false ? ' (Unapproved)' : ''}`}
+              />
+            ))}
+            {dayEvents.length > 6 && (
+              <button
+                onClick={() => onViewAllClick(new Date(year, month, day, 12, 0, 0))}
+                className="text-[8px] text-primary font-bold"
+                title={`${dayEvents.length} events`}
+              >
+                +{dayEvents.length - 6}
+              </button>
+            )}
+          </div>
           
-          {/* View all button */}
-          {hasMoreEvents && (
-            <button
-              onClick={() => onViewAllClick(new Date(year, month, day, 12, 0, 0))}
-              className="w-full text-xs text-primary hover:underline text-left px-2 py-1"
-            >
-              +{dayEvents.length - maxEventsToShow} more
-            </button>
-          )}
+          {/* Desktop view: Show event cards */}
+          <div className="hidden sm:flex flex-col space-y-1">
+            {eventsToDisplay.map(event => (
+              <button
+                key={event.id}
+                onClick={() => onEventClick(event)}
+                className="w-full text-left px-2 py-1 text-xs rounded bg-primary/10 hover:bg-primary/20 transition-colors truncate relative"
+                title={`${event.time} - ${event.title}${event.approved === false ? ' (Unapproved)' : ''}`}
+              >
+                {event.approved === false && (
+                  <Badge variant="destructive" className="absolute -top-1 -right-1 h-2 w-2 p-0 rounded-full" />
+                )}
+                <div className="font-medium truncate">{event.title}</div>
+                <div className="text-muted-foreground truncate">{event.time}</div>
+              </button>
+            ))}
+            
+            {/* View all button */}
+            {hasMoreEvents && (
+              <button
+                onClick={() => onViewAllClick(new Date(year, month, day, 12, 0, 0))}
+                className="w-full text-xs text-primary hover:underline text-left px-2 py-1"
+              >
+                +{dayEvents.length - maxEventsToShow} more
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
   }
   
   return (
-    <div className="bg-card border border-border rounded-lg p-4">
+    <div className="bg-card border border-border rounded-lg p-2 sm:p-4">
       {/* Header with month/year and navigation */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-2 sm:mb-4">
         <button
           onClick={handlePrevMonth}
-          className="p-2 hover:bg-accent rounded-lg transition-colors"
+          className="p-1 sm:p-2 hover:bg-accent rounded-lg transition-colors"
           aria-label="Previous month"
         >
-          <ChevronLeft className="w-5 h-5" />
+          <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
         
-        <h2 className="text-lg font-semibold">
+        <h2 className="text-base sm:text-lg font-semibold">
           {monthNames[month]} {year}
         </h2>
         
         <button
           onClick={handleNextMonth}
-          className="p-2 hover:bg-accent rounded-lg transition-colors"
+          className="p-1 sm:p-2 hover:bg-accent rounded-lg transition-colors"
           aria-label="Next month"
         >
-          <ChevronRight className="w-5 h-5" />
+          <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
       </div>
       
       {/* Day names */}
       <div className="grid grid-cols-7 gap-0 mb-0">
         {dayNames.map(day => (
-          <div key={day} className="text-center text-sm font-semibold text-muted-foreground py-2 border-b border-border">
-            {day}
+          <div key={day} className="text-center text-xs sm:text-sm font-semibold text-muted-foreground py-1 sm:py-2 border-b border-border">
+            <span className="hidden sm:inline">{day}</span>
+            <span className="sm:hidden">{day.slice(0, 1)}</span>
           </div>
         ))}
       </div>

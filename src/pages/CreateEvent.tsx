@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { generateClient } from 'aws-amplify/data';
 import { fetchAuthSession } from 'aws-amplify/auth';
+import { uploadData } from 'aws-amplify/storage';
 import type { Schema } from '@/../amplify/data/resource';
 import ContentOnly from '@/components/layouts/ContentOnly';
 import { Button } from '@/components/ui/button';
@@ -16,7 +17,7 @@ import RouteBuilder from '@/components/RouteBuilder';
 import ChapterAssociationSelector from '@/components/ChapterAssociationSelector';
 import { toast } from 'sonner';
 import { EVENT_CATEGORY_VALUES } from '@/../amplify/config/enums';
-import { ArrowLeft, Loader2, Info } from 'lucide-react';
+import { ArrowLeft, Loader2, Info, Upload, X } from 'lucide-react';
 import { useEffect } from 'react';
 
 const client = generateClient<Schema>();
@@ -59,12 +60,6 @@ interface RoutePoint {
   order: number;
 }
 
-interface ChapterAssociation {
-  chapterId: string;
-  relationship: string;
-  details?: string;
-}
-
 export default function CreateEvent() {
   const navigate = useNavigate();
   const { authStatus } = useAuthenticator((context) => [context.authStatus]);
@@ -86,7 +81,9 @@ export default function CreateEvent() {
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [routePoints, setRoutePoints] = useState<RoutePoint[]>([]);
-  const [images, setImages] = useState<string[]>(['']);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
   
   // Chapter association state
   const [chapters, setChapters] = useState<Array<{ id: string; name: string; description: string | null; clubName: string }>>([]);
@@ -301,8 +298,41 @@ export default function CreateEvent() {
         throw new Error('User not authenticated');
       }
 
-      // Filter out empty image URLs
-      const validImages = images.filter(img => img.trim() !== '');
+      // Upload images to S3 if any
+      let uploadedImageKeys: string[] = [];
+      if (imageFiles.length > 0) {
+        setUploadingImages(true);
+        toast.info('Uploading images...', { duration: 2000 });
+
+        try {
+          const uploadPromises = imageFiles.map(async (file, index) => {
+            const fileExtension = file.name.split('.').pop();
+            const fileName = `${Date.now()}-${index}.${fileExtension}`;
+            const key = `event-images/${fileName}`;
+
+            const result = await uploadData({
+              path: key,
+              data: file,
+              options: {
+                contentType: file.type,
+              }
+            }).result;
+
+            return result.path;
+          });
+
+          uploadedImageKeys = await Promise.all(uploadPromises);
+          toast.success('Images uploaded successfully!');
+        } catch (uploadError) {
+          console.error('Error uploading images:', uploadError);
+          toast.error('Failed to upload images', {
+            description: 'Please try again',
+          });
+          throw uploadError;
+        } finally {
+          setUploadingImages(false);
+        }
+      }
 
       // Format time string based on category
       const timeString = formatTimeForStorage(category, {
@@ -329,7 +359,7 @@ export default function CreateEvent() {
         latitude: latitude!,
         longitude: longitude!,
         route: category === 'Ride' && routePoints.length > 0 ? routePoints : undefined,
-        images: validImages.length > 0 ? validImages : undefined,
+        images: uploadedImageKeys.length > 0 ? uploadedImageKeys : undefined,
         approved: false,
         owners: [userId],
       };
@@ -423,18 +453,58 @@ export default function CreateEvent() {
     setErrors(prev => ({ ...prev, location: '' }));
   };
 
-  const handleAddImage = () => {
-    setImages([...images, '']);
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const newFiles = Array.from(files);
+    
+    // Validate file types
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    const invalidFiles = newFiles.filter(file => !validTypes.includes(file.type));
+    
+    if (invalidFiles.length > 0) {
+      toast.error('Invalid file type', {
+        description: 'Please upload only image files (JPEG, PNG, GIF, WebP)',
+      });
+      return;
+    }
+
+    // Validate file sizes (5MB max per file)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const oversizedFiles = newFiles.filter(file => file.size > maxSize);
+    
+    if (oversizedFiles.length > 0) {
+      toast.error('File too large', {
+        description: 'Each image must be less than 5MB',
+      });
+      return;
+    }
+
+    // Limit total number of images
+    if (imageFiles.length + newFiles.length > 5) {
+      toast.error('Too many images', {
+        description: 'You can upload a maximum of 5 images',
+      });
+      return;
+    }
+
+    // Add files and create previews
+    setImageFiles(prev => [...prev, ...newFiles]);
+    
+    // Create preview URLs
+    newFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreviews(prev => [...prev, reader.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
   const handleRemoveImage = (index: number) => {
-    setImages(images.filter((_, i) => i !== index));
-  };
-
-  const handleImageChange = (index: number, value: string) => {
-    const newImages = [...images];
-    newImages[index] = value;
-    setImages(newImages);
+    setImageFiles(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -719,37 +789,77 @@ export default function CreateEvent() {
           {/* Images */}
           <Card>
             <CardHeader>
-              <CardTitle>Images</CardTitle>
+              <CardTitle>Event Images</CardTitle>
               <CardDescription>
-                Add image URLs for your event (optional)
+                Upload images for your event (e.g., flyer, promotional images). Maximum 5 images, 5MB each.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {images.map((image, index) => (
-                <div key={index} className="flex gap-2">
+              {/* File Upload Input */}
+              <div>
+                <Label htmlFor="image-upload" className="cursor-pointer">
+                  <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center hover:border-muted-foreground/50 transition-colors">
+                    <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-sm font-medium mb-1">Click to upload images</p>
+                    <p className="text-xs text-muted-foreground">
+                      PNG, JPG, GIF, WebP up to 5MB each (max 5 images)
+                    </p>
+                  </div>
                   <Input
-                    value={image}
-                    onChange={(e) => handleImageChange(index, e.target.value)}
-                    placeholder="https://example.com/image.jpg"
+                    id="image-upload"
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                    multiple
+                    onChange={handleImageFileChange}
+                    className="hidden"
+                    disabled={imageFiles.length >= 5 || uploadingImages}
                   />
-                  {images.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => handleRemoveImage(index)}
-                    >
-                      Remove
-                    </Button>
-                  )}
+                </Label>
+              </div>
+
+              {/* Image Previews */}
+              {imagePreviews.length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {imagePreviews.map((preview, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={preview}
+                        alt={`Preview ${index + 1}`}
+                        className="w-full h-32 object-cover rounded-lg border"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => handleRemoveImage(index)}
+                        disabled={uploadingImages}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                      <div className="absolute bottom-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                        {imageFiles[index]?.name}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleAddImage}
-              >
-                Add Another Image
-              </Button>
+              )}
+
+              {/* Upload Status */}
+              {uploadingImages && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Uploading images...</span>
+                </div>
+              )}
+
+              {/* Info Text */}
+              {imageFiles.length > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  {imageFiles.length} image{imageFiles.length !== 1 ? 's' : ''} selected
+                  {imageFiles.length >= 5 && ' (maximum reached)'}
+                </p>
+              )}
             </CardContent>
           </Card>
 

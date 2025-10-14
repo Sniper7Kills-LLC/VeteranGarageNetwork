@@ -15,6 +15,7 @@ import LocationPickerMap from '@/components/LocationPickerMap';
 
 import { SHOP_SERVICE_VALUES, SHOP_SERVICE_DESCRIPTIONS } from '@/../amplify/config/enums';
 import { generateClient } from 'aws-amplify/data';
+import { fetchAuthSession } from 'aws-amplify/auth';
 import type { Schema } from '@/../amplify/data/resource';
 import ClubAssociationSelector from '@/components/ClubAssociationSelector';
 import ChapterAssociationSelector from '@/components/ChapterAssociationSelector';
@@ -384,6 +385,14 @@ export default function CreateShopModal({
     setIsSubmitting(true);
 
     try {
+      // Get current user's identity
+      const session = await fetchAuthSession();
+      const userId = session.tokens?.idToken?.payload.sub as string;
+
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
       const client = generateClient<Schema>();
       
       // Prepare shop data - matching pattern from CreateClubModal
@@ -401,6 +410,7 @@ export default function CreateShopModal({
         website?: string;
         services?: string[];
         notes: string;
+        owners: string[];
       } = {
         name: shopName.trim(),
         description: shopDescription.trim() || undefined,
@@ -415,6 +425,7 @@ export default function CreateShopModal({
         website: website.trim() || undefined,
         services: selectedServices.size > 0 ? Array.from(selectedServices) : undefined,
         notes: adminNotes.trim(),
+        owners: [userId],
       };
 
       // Create the shop in the database

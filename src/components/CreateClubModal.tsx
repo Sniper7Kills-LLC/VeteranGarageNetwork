@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 
 import { CLUB_TYPE_VALUES, type ClubType } from '@/../amplify/config/enums';
 import { generateClient } from 'aws-amplify/data';
+import { fetchAuthSession } from 'aws-amplify/auth';
 import type { Schema } from '@/../amplify/data/resource';
 
 interface CreateClubModalProps {
@@ -63,6 +64,14 @@ export default function CreateClubModal({
     setIsSubmitting(true);
 
     try {
+      // Get current user's identity
+      const session = await fetchAuthSession();
+      const userId = session.tokens?.idToken?.payload.sub as string;
+
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
       const client = generateClient<Schema>();
       
       // Prepare club data
@@ -72,10 +81,12 @@ export default function CreateClubModal({
         website?: string;
         notes: string;
         type?: ClubType;
+        owners: string[];
       } = {
         name: clubName.trim(),
         description: clubDescription.trim() || undefined,
         notes: adminNotes.trim(),
+        owners: [userId],
       };
 
       // Add optional fields

@@ -34,20 +34,25 @@ export const router = createBrowserRouter([
       },
       {
         path: 'events',
+        Component: lazy(() => import('./pages/Events')),
+      },
+      {
+        path: 'events/create',
+        element: <ProtectedRoute />,
         children: [
           {
             index: true,
-            Component: lazy(() => import('./pages/Events')),
+            Component: lazy(() => import('./pages/CreateEvent')),
           },
+        ],
+      },
+      {
+        path: 'events/edit/:id',
+        element: <ProtectedRoute />,
+        children: [
           {
-            path: 'create',
-            element: <ProtectedRoute />,
-            children: [
-              {
-                index: true,
-                Component: lazy(() => import('./pages/CreateEvent')),
-              },
-            ],
+            index: true,
+            Component: lazy(() => import('./pages/EditEvent')),
           },
         ],
       },
