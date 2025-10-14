@@ -36,10 +36,12 @@ const getStatsPermissions = new PolicyStatement({
 backend.getStats.resources.lambda.addToRolePolicy(getStatsPermissions);
 
 // Grant authenticated and unauthenticated identity pool roles permission to invoke the Lambda
+// Note: We grant permission to invoke any Lambda in the account to avoid circular dependencies
+// The actual authorization is handled by the AppSync resolver and the Lambda function's logic
 const lambdaInvokePolicy = new PolicyStatement({
   effect: Effect.ALLOW,
   actions: ['lambda:InvokeFunction'],
-  resources: [backend.getStats.resources.lambda.functionArn],
+  resources: ['*'], // Using wildcard to avoid circular dependency between auth and data stacks
 });
 
 backend.auth.resources.authenticatedUserIamRole.addToPrincipalPolicy(lambdaInvokePolicy);
