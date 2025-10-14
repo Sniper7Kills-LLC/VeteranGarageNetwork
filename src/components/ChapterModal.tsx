@@ -7,11 +7,10 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/../amplify/data/resource';
+import ChapterForm, { type ChapterFormData } from '@/components/forms/ChapterForm';
+import { toast } from 'sonner';
 
 const client = generateClient<Schema>();
 
@@ -34,6 +33,7 @@ interface ClubChapter {
   address?: string;
   city?: string;
   state?: string;
+  zipCode?: string;
   latitude: number;
   longitude: number;
   roles: ChapterRole[];
@@ -55,65 +55,76 @@ export default function ChapterModal({
   onSave,
 }: ChapterModalProps) {
   const [editMode, setEditMode] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    website: '',
-    address: '',
-    city: '',
-    state: '',
-  });
 
-  // Initialize form data when entering edit mode
   const handleEditClick = () => {
-    setFormData({
-      name: chapter?.name || '',
-      description: chapter?.description || '',
-      website: chapter?.website || '',
-      address: chapter?.address || '',
-      city: chapter?.city || '',
-      state: chapter?.state || '',
-    });
     setEditMode(true);
   };
 
   const handleCancel = () => {
     setEditMode(false);
-    setFormData({
-      name: '',
-      description: '',
-      website: '',
-      address: '',
-      city: '',
-      state: '',
-    });
   };
 
-  const handleSave = async () => {
+  const handleSubmit = async (formData: ChapterFormData) => {
     if (!chapter) return;
 
     try {
-      setSaving(true);
+      // Update chapter
       await client.models.ClubChapter.update({
         id: chapter.id,
         name: formData.name,
         description: formData.description || null,
         website: formData.website || null,
         address: formData.address || null,
-        city: formData.city || null,
-        state: formData.state || null,
+        city: formData.city,
+        state: formData.state,
+        zipCode: formData.zipCode || null,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
       });
 
+      // Delete existing roles
+      const deletePromises = chapter.roles.map(role =>
+        client.models.ChapterRole.delete({ id: role.id })
+      );
+      await Promise.all(deletePromises);
+
+      // Create new roles
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const roleCreationPromises = formData.roles.map(async (role) => {
+        const roleData: {
+          chapterId: string;
+          roleTitle: string;
+          personName: string;
+          email?: string;
+          phone?: string;
+        } = {
+          chapterId: chapter.id,
+          roleTitle: role.roleTitle,
+          personName: role.personName,
+        };
+
+        if (role.email && emailRegex.test(role.email)) {
+          roleData.email = role.email;
+        }
+
+        if (role.phone) {
+          roleData.phone = role.phone;
+        }
+
+        return client.models.ChapterRole.create(roleData, { authMode: 'userPool' });
+      });
+
+      await Promise.all(roleCreationPromises);
+
+      toast.success('Chapter updated successfully!');
       setEditMode(false);
+      
       if (onSave) {
         onSave();
       }
     } catch (error) {
       console.error('Error updating chapter:', error);
-      alert('Failed to update chapter. Please try again.');
-    } finally {
-      setSaving(false);
+      throw error; // Re-throw to let ChapterForm handle the error display
     }
   };
 
@@ -121,95 +132,44 @@ export default function ChapterModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto z-[9999]">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto z-[9999]">
         <DialogHeader>
-          <DialogTitle className="text-2xl">{chapter.name}</DialogTitle>
-          <p className="text-sm text-muted-foreground">{chapter.clubName}</p>
+          <DialogTitle className="text-2xl">
+            {editMode ? 'Edit Chapter' : chapter.name}
+          </DialogTitle>
+          {!editMode && <p className="text-sm text-muted-foreground">{chapter.clubName}</p>}
         </DialogHeader>
 
-        <div className="space-y-6 mt-4">
+        <div className="mt-4">
           {editMode ? (
             /* Edit Mode */
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="name">Chapter Name *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  placeholder="Enter chapter name"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  placeholder="Describe your chapter"
-                  rows={3}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="website">Website</Label>
-                <Input
-                  id="website"
-                  type="url"
-                  value={formData.website}
-                  onChange={(e) =>
-                    setFormData({ ...formData, website: e.target.value })
-                  }
-                  placeholder="https://example.com"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
-                <Input
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) =>
-                    setFormData({ ...formData, address: e.target.value })
-                  }
-                  placeholder="Street address"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="city">City</Label>
-                  <Input
-                    id="city"
-                    value={formData.city}
-                    onChange={(e) =>
-                      setFormData({ ...formData, city: e.target.value })
-                    }
-                    placeholder="City"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="state">State</Label>
-                  <Input
-                    id="state"
-                    value={formData.state}
-                    onChange={(e) =>
-                      setFormData({ ...formData, state: e.target.value })
-                    }
-                    placeholder="State"
-                  />
-                </div>
-              </div>
-            </>
+            <ChapterForm
+              mode="edit"
+              initialData={{
+                id: chapter.id,
+                clubId: chapter.clubId,
+                name: chapter.name,
+                description: chapter.description,
+                website: chapter.website,
+                address: chapter.address,
+                city: chapter.city || '',
+                state: chapter.state || '',
+                zipCode: chapter.zipCode,
+                latitude: chapter.latitude,
+                longitude: chapter.longitude,
+                roles: chapter.roles.map(role => ({
+                  roleTitle: role.roleTitle,
+                  personName: role.personName,
+                  email: role.email || '',
+                  phone: role.phone || '',
+                })),
+              }}
+              onSubmit={handleSubmit}
+              onCancel={handleCancel}
+            />
           ) : (
             /* View Mode */
-            <>
+            <div className="space-y-6">
               {/* Club Types */}
               {chapter.clubType && chapter.clubType.length > 0 && (
                 <div>
@@ -318,24 +278,13 @@ export default function ChapterModal({
                   </div>
                 </div>
               )}
-            </>
+            </div>
           )}
         </div>
 
-        {isOwner && (
+        {isOwner && !editMode && (
           <DialogFooter className="mt-6">
-            {editMode ? (
-              <>
-                <Button variant="outline" onClick={handleCancel} disabled={saving}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSave} disabled={saving || !formData.name}>
-                  {saving ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </>
-            ) : (
-              <Button onClick={handleEditClick}>Edit Chapter</Button>
-            )}
+            <Button onClick={handleEditClick}>Edit Chapter</Button>
           </DialogFooter>
         )}
       </DialogContent>

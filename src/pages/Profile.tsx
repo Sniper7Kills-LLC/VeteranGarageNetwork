@@ -1,5 +1,5 @@
 import { useAuthenticator } from '@aws-amplify/ui-react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import { fetchAuthSession } from 'aws-amplify/auth';
@@ -9,7 +9,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import ClubModal from '@/components/ClubModal';
 import ChapterModal from '@/components/ChapterModal';
-import EventModal from '@/components/EventModal';
 import ShopModal from '@/components/ShopModal';
 
 const client = generateClient<Schema>();
@@ -51,6 +50,7 @@ interface OwnedShop {
 
 export default function Profile() {
   const { authStatus } = useAuthenticator((context) => [context.authStatus]);
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [ownedClubs, setOwnedClubs] = useState<OwnedClub[]>([]);
   const [isLoadingClubs, setIsLoadingClubs] = useState(true);
@@ -84,9 +84,6 @@ export default function Profile() {
 
   const [selectedChapter, setSelectedChapter] = useState<any>(null);
   const [chapterModalOpen, setChapterModalOpen] = useState(false);
-
-  const [selectedEvent, setSelectedEvent] = useState<any>(null);
-  const [eventModalOpen, setEventModalOpen] = useState(false);
 
   const [selectedShop, setSelectedShop] = useState<any>(null);
   const [shopModalOpen, setShopModalOpen] = useState(false);
@@ -427,44 +424,9 @@ export default function Profile() {
     }
   };
 
-  const handleEventClick = async (eventId: string) => {
-    // Check if already loaded
-    if (selectedEvent?.id === eventId) {
-      setEventModalOpen(true);
-      return;
-    }
-
-    try {
-      const { data: event } = await client.models.Event.get(
-        { id: eventId },
-        { authMode: 'userPool' }
-      );
-      
-      if (event) {
-        // Transform to match EventModal interface
-        const locationParts = [event.address, event.city, event.state].filter(Boolean);
-        const location = locationParts.join(', ') || 'Location TBD';
-        
-        const transformedEvent = {
-          id: event.id,
-          title: event.title,
-          date: event.date,
-          time: event.time,
-          location,
-          description: event.description,
-          category: event.category || 'Meetup',
-          lat: event.latitude,
-          lng: event.longitude,
-          route: event.route?.filter(point => point !== null).map(point => [point!.latitude, point!.longitude] as [number, number]),
-          images: event.images?.filter((img): img is string => img !== null)
-        };
-        setSelectedEvent(transformedEvent);
-        setEventModalOpen(true);
-      }
-    } catch (error) {
-      console.error('Error fetching event:', error);
-      alert('Failed to load event details');
-    }
+  const handleEventClick = (eventId: string) => {
+    // Navigate to edit page
+    navigate(`/events/edit/${eventId}`);
   };
 
   const handleShopClick = async (shopId: string) => {
@@ -506,20 +468,122 @@ export default function Profile() {
   };
 
   // Refresh handlers after save
-  const handleClubSave = () => {
-    // Refresh clubs list
-    setSelectedClub(null);
-    window.location.reload(); // Simple refresh for now
+  const handleClubSave = async () => {
+    setClubModalOpen(false);
+    
+    // Refetch the updated club data
+    if (selectedClub?.id) {
+      try {
+        const { data: club } = await client.models.Club.get(
+          { id: selectedClub.id },
+          { authMode: 'userPool' }
+        );
+        
+        if (club) {
+          setSelectedClub(club);
+          
+          // Update the club in the owned clubs list
+          setOwnedClubs(prev => 
+            prev.map(c => c.id === club.id ? {
+              id: club.id,
+              name: club.name,
+              description: club.description,
+              approved: club.approved || false,
+              type: club.type,
+            } : c)
+          );
+        }
+      } catch (error) {
+        console.error('Error refetching club:', error);
+      }
+    }
   };
 
-  const handleChapterSave = () => {
-    setSelectedChapter(null);
-    window.location.reload();
+  const handleChapterSave = async () => {
+    setChapterModalOpen(false);
+    
+    // Refetch the updated chapter data
+    if (selectedChapter?.id) {
+      try {
+        const { data: chapter } = await client.models.ClubChapter.get(
+          { id: selectedChapter.id },
+          { 
+            authMode: 'userPool',
+            selectionSet: ['id', 'name', 'description', 'website', 'address', 'city', 'state', 'latitude', 'longitude', 'clubId', 'roles.*']
+          }
+        );
+        
+        if (chapter) {
+          const transformedChapter = {
+            ...chapter,
+            clubName: selectedChapter.clubName || '',
+            clubType: selectedChapter.clubType || [],
+            roles: chapter.roles || []
+          };
+          setSelectedChapter(transformedChapter);
+          
+          // Update the chapter in the owned chapters list
+          setOwnedChapters(prev => 
+            prev.map(c => c.id === chapter.id ? {
+              id: chapter.id,
+              name: chapter.name,
+              description: chapter.description,
+              approved: chapter.approved || false,
+              city: chapter.city,
+              state: chapter.state,
+            } : c)
+          );
+        }
+      } catch (error) {
+        console.error('Error refetching chapter:', error);
+      }
+    }
   };
 
-  const handleShopSave = () => {
-    setSelectedShop(null);
-    window.location.reload();
+  const handleShopSave = async () => {
+    setShopModalOpen(false);
+    
+    // Refetch the updated shop data
+    if (selectedShop?.id) {
+      try {
+        const { data: shop } = await client.models.Shop.get(
+          { id: selectedShop.id },
+          { 
+            authMode: 'userPool',
+            selectionSet: ['id', 'name', 'description', 'address', 'city', 'state', 'zipCode', 'latitude', 'longitude', 'phone', 'email', 'website', 'services', 'clubAssociations.*']
+          }
+        );
+        
+        if (shop) {
+          const transformedShop = {
+            ...shop,
+            services: shop.services?.filter((s): s is string => s !== null) || [],
+            clubAssociations: shop.clubAssociations?.map(assoc => ({
+              id: assoc.id,
+              clubId: assoc.clubId,
+              clubName: '',
+              relationship: assoc.relationship,
+              details: assoc.details
+            })) || []
+          };
+          setSelectedShop(transformedShop);
+          
+          // Update the shop in the owned shops list
+          setOwnedShops(prev => 
+            prev.map(s => s.id === shop.id ? {
+              id: shop.id,
+              name: shop.name,
+              description: shop.description,
+              location: [shop.city, shop.state].filter(Boolean).join(', ') || 'Location TBD',
+              services: shop.services?.filter((s): s is string => s !== null) || [],
+              approved: shop.approved || false,
+            } : s)
+          );
+        }
+      } catch (error) {
+        console.error('Error refetching shop:', error);
+      }
+    }
   };
 
   // Parse OAuth error from URL parameters
@@ -1039,13 +1103,6 @@ export default function Profile() {
           onOpenChange={setChapterModalOpen}
           isOwner={true}
           onSave={handleChapterSave}
-        />
-
-        <EventModal
-          event={selectedEvent}
-          isOpen={eventModalOpen}
-          onClose={() => setEventModalOpen(false)}
-          isOwner={true}
         />
 
         <ShopModal
