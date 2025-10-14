@@ -1,5 +1,5 @@
 import { DynamoDBClient, ScanCommand, ListTablesCommand } from "@aws-sdk/client-dynamodb";
-import { CognitoIdentityProviderClient, ListUsersCommand } from "@aws-sdk/client-cognito-identity-provider";
+import { CognitoIdentityProviderClient, ListUsersCommand, ListUsersCommandOutput } from "@aws-sdk/client-cognito-identity-provider";
 
 const dynamoClient = new DynamoDBClient({});
 const cognitoClient = new CognitoIdentityProviderClient({});
@@ -17,8 +17,8 @@ async function findTableNames() {
   const tables = tablesResult.TableNames || [];
 
   // Find tables that match our model names
-  const chapterTable = tables.find(name => name.includes('ClubChapter'));
-  const eventTable = tables.find(name => name.includes('Event') && !name.includes('EventChapter'));
+  const chapterTable = tables.find((name: string) => name.includes('ClubChapter'));
+  const eventTable = tables.find((name: string) => name.includes('Event') && !name.includes('EventChapter'));
 
   if (!chapterTable || !eventTable) {
     throw new Error(`Could not find required tables. Found: ${tables.join(', ')}`);
@@ -59,13 +59,13 @@ export const handler = async () => {
   let paginationToken: string | undefined = undefined;
   
   do {
-    const listUsersCommand = new ListUsersCommand({
+    const listUsersCommand: ListUsersCommand = new ListUsersCommand({
       UserPoolId: userPoolId,
       Limit: 60, // Max allowed per request
       PaginationToken: paginationToken,
     });
     
-    const userResult = await cognitoClient.send(listUsersCommand);
+    const userResult: ListUsersCommandOutput = await cognitoClient.send(listUsersCommand);
     memberCount += userResult.Users?.length || 0;
     paginationToken = userResult.PaginationToken;
   } while (paginationToken);
