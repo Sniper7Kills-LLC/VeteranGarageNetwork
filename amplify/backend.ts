@@ -15,6 +15,9 @@ export const backend = defineBackend({
   getStats,
 });
 
+// Add USER_POOL_ID environment variable to the Lambda function
+backend.getStats.addEnvironment('USER_POOL_ID', backend.auth.resources.userPool.userPoolId);
+
 // Grant the getStats function access to DynamoDB and Cognito
 const getStatsPermissions = new PolicyStatement({
   effect: Effect.ALLOW,
@@ -31,3 +34,13 @@ const getStatsPermissions = new PolicyStatement({
 });
 
 backend.getStats.resources.lambda.addToRolePolicy(getStatsPermissions);
+
+// Grant authenticated and unauthenticated identity pool roles permission to invoke the Lambda
+const lambdaInvokePolicy = new PolicyStatement({
+  effect: Effect.ALLOW,
+  actions: ['lambda:InvokeFunction'],
+  resources: [backend.getStats.resources.lambda.functionArn],
+});
+
+backend.auth.resources.authenticatedUserIamRole.addToPrincipalPolicy(lambdaInvokePolicy);
+backend.auth.resources.unauthenticatedUserIamRole.addToPrincipalPolicy(lambdaInvokePolicy);
