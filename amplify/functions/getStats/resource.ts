@@ -5,6 +5,6 @@ export const getStats = defineFunction({
   entry: './handler.ts',
   resourceGroupName: 'data',
   environment: {
-    // This will be populated by backend.ts
+    USER_POOL_ID: process.env.AMPLIFY_AUTH_USERPOOL_ID || '',
   },
 });
