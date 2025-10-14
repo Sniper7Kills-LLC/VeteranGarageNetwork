@@ -7,6 +7,7 @@ import { AlertTriangle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../amplify/data/resource';
+import { useAuthenticator } from '@aws-amplify/ui-react';
 
 const client = generateClient<Schema>();
 
@@ -18,6 +19,7 @@ interface Stats {
 }
 
 export default function Home() {
+  const { authStatus } = useAuthenticator((context) => [context.authStatus]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,8 +30,11 @@ export default function Home() {
         setLoading(true);
         setError(null);
 
+        // Determine auth mode based on authentication status
+        const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
+
         // Call the Lambda function via the GraphQL query
-        const { data: statsData, errors } = await client.queries.getStats();
+        const { data: statsData, errors } = await client.queries.getStats({ authMode });
 
         if (errors) {
           throw new Error(errors.map(e => e.message).join(', '));
@@ -54,7 +59,7 @@ export default function Home() {
     }
 
     fetchStats();
-  }, []);
+  }, [authStatus]);
 
   const displayStats = [
     { label: 'Chapters Registered', value: loading ? '...' : (stats?.chapters.toString() || '0') },
