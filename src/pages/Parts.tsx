@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Grid3x3, List, SlidersHorizontal, Info } from 'lucide-react';
+import { Search, Grid3x3, List, SlidersHorizontal, AlertTriangle } from 'lucide-react';
 import ContentWithSidebar from '@/components/layouts/ContentWithSidebar';
 import PartCard from '@/components/PartCard';
 import PartListItem from '@/components/PartListItem';
@@ -532,12 +532,14 @@ export default function Parts() {
       }
     >
       <div className="space-y-6">
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertDescription>
-            This section is planned for the future and will be last in development.
-          </AlertDescription>
-        </Alert>
+        <div className="max-w-4xl mx-auto">
+          <Alert variant="destructive" className="border-2 border-destructive">
+            <AlertTriangle className="h-5 w-5" />
+            <AlertDescription className="text-center font-semibold text-base">
+              This section is currently developed with Combat Customs as the primary user but will be open to others in the future. This section is planned for the future and will be last in development.
+            </AlertDescription>
+          </Alert>
+        </div>
 
         <div>
           <h1 className="text-3xl font-bold mb-2">Parts Marketplace</h1>

@@ -2,6 +2,7 @@ import { createBrowserRouter } from 'react-router-dom';
 import { lazy } from 'react';
 import MainLayout from './components/layouts/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './components/AdminRoute';
 
 export const router = createBrowserRouter([
   {
@@ -59,6 +60,16 @@ export const router = createBrowserRouter([
       {
         path: 'profile',
         Component: lazy(() => import('./pages/Profile')),
+      },
+      {
+        path: 'approvals',
+        element: <AdminRoute />,
+        children: [
+          {
+            index: true,
+            Component: lazy(() => import('./pages/Approvals')),
+          },
+        ],
       },
     ],
   },

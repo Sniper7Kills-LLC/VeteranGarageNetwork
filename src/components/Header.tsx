@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useAuthenticator, Authenticator } from '@aws-amplify/ui-react';
 import { useState, useEffect } from 'react';
+import { fetchAuthSession } from 'aws-amplify/auth';
 import { Menu } from 'lucide-react';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
@@ -16,8 +17,30 @@ export default function Header() {
   const { user, signOut, authStatus } = useAuthenticator((context) => [context.user]);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const isAuthenticated = authStatus === 'authenticated';
+
+  // Check if user is admin
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (authStatus !== 'authenticated') {
+        setIsAdmin(false);
+        return;
+      }
+
+      try {
+        const session = await fetchAuthSession();
+        const groups = (session.tokens?.accessToken?.payload['cognito:groups'] as string[]) || [];
+        setIsAdmin(groups.includes('admin'));
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+        setIsAdmin(false);
+      }
+    };
+
+    checkAdminStatus();
+  }, [authStatus]);
 
   // Close modal when user successfully authenticates
   useEffect(() => {
@@ -56,6 +79,11 @@ export default function Header() {
               {isAuthenticated && (
                 <Link to="/profile" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                   Profile
+                </Link>
+              )}
+              {isAdmin && (
+                <Link to="/approvals" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  Approvals
                 </Link>
               )}
             </div>
@@ -150,6 +178,15 @@ export default function Header() {
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       Profile
+                    </Link>
+                  )}
+                  {isAdmin && (
+                    <Link 
+                      to="/approvals" 
+                      className="text-lg font-medium hover:text-primary hover:bg-accent transition-colors py-3 px-4 rounded-md"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Approvals
                     </Link>
                   )}
                   

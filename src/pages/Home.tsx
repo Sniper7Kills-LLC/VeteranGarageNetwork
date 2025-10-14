@@ -89,12 +89,14 @@ export default function Home() {
   return (
     <ContentOnly>
       <div className="space-y-16">
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            This site is under active development. Facebook login does not currently work.
-          </AlertDescription>
-        </Alert>
+        <div className="max-w-4xl mx-auto">
+          <Alert variant="destructive" className="border-2 border-destructive">
+            <AlertTriangle className="h-5 w-5" />
+            <AlertDescription className="text-center font-semibold text-base">
+              This site is under active development. Facebook login does not currently work.
+            </AlertDescription>
+          </Alert>
+        </div>
 
         {/* Hero Section */}
         <section className="text-center space-y-6 py-12">
