@@ -552,11 +552,13 @@ export default function Clubs() {
           </p>
         </div>
 
-        <Map 
-          locations={mapLocations} 
-          onMarkerClick={handleMarkerClick}
-          onBoundsChange={handleBoundsChange}
-        />
+        <div className="h-[500px]">
+          <Map 
+            locations={mapLocations} 
+            onMarkerClick={handleMarkerClick}
+            onBoundsChange={handleBoundsChange}
+          />
+        </div>
 
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">

@@ -87,10 +87,39 @@ export default function ShopModal({
       }, { authMode: 'userPool' });
 
       // Delete existing club associations
-      const deletePromises = shop.clubAssociations.map(assoc =>
-        client.models.ClubAssociation.delete({ id: assoc.id }, { authMode: 'userPool' })
+      console.log(`Attempting to delete ${shop.clubAssociations.length} existing club associations`);
+      
+      const deleteResults = await Promise.all(
+        shop.clubAssociations.map(async (assoc) => {
+          try {
+            const result = await client.models.ClubAssociation.delete(
+              { id: assoc.id }, 
+              { authMode: 'userPool' }
+            );
+            
+            if (result.errors && result.errors.length > 0) {
+              console.error(`Failed to delete association ${assoc.id}:`, result.errors);
+              return { success: false, id: assoc.id, errors: result.errors };
+            }
+            
+            console.log(`Successfully deleted association ${assoc.id}`);
+            return { success: true, id: assoc.id };
+          } catch (error) {
+            console.error(`Exception deleting association ${assoc.id}:`, error);
+            return { success: false, id: assoc.id, error };
+          }
+        })
       );
-      await Promise.all(deletePromises);
+      
+      const failedDeletions = deleteResults.filter(r => !r.success);
+      if (failedDeletions.length > 0) {
+        console.warn(`${failedDeletions.length} associations failed to delete:`, failedDeletions);
+        toast.warning('Some existing associations could not be removed', {
+          description: 'This may result in duplicate associations. Please contact support if this persists.',
+        });
+      } else {
+        console.log('All existing associations deleted successfully');
+      }
 
       // Create new club associations
       const clubAssociationPromises = (formData.clubAssociations || []).map(async (association) => {

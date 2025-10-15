@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Clock, MapPin, Map as MapIcon, List } from 'lucide-react';
+import { getUrl } from 'aws-amplify/storage';
 import {
   Dialog,
   DialogContent,
@@ -36,6 +37,61 @@ interface DayEventsModalProps {
 
 export default function DayEventsModal({ date, events, isOpen, onClose, onEventClick }: DayEventsModalProps) {
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  const [eventImageUrls, setEventImageUrls] = useState<Record<string, string[]>>({});
+  const [loadingImages, setLoadingImages] = useState(false);
+
+  // Fetch S3 URLs for all event images
+  useEffect(() => {
+    const fetchAllImageUrls = async () => {
+      if (!events || events.length === 0) {
+        setEventImageUrls({});
+        return;
+      }
+
+      setLoadingImages(true);
+      try {
+        const urlsMap: Record<string, string[]> = {};
+
+        await Promise.all(
+          events.map(async (event) => {
+            if (!event.images || event.images.length === 0) {
+              return;
+            }
+
+            const urlPromises = event.images.map(async (imagePath) => {
+              // Check if it's already a full URL (for backward compatibility)
+              if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+                return imagePath;
+              }
+              
+              // Otherwise, fetch from S3
+              try {
+                const result = await getUrl({
+                  path: imagePath,
+                });
+                return result.url.toString();
+              } catch (error) {
+                console.error(`Error fetching image URL for ${imagePath}:`, error);
+                return '';
+              }
+            });
+
+            const urls = await Promise.all(urlPromises);
+            urlsMap[event.id] = urls.filter(url => url !== '');
+          })
+        );
+
+        setEventImageUrls(urlsMap);
+      } catch (error) {
+        console.error('Error fetching image URLs:', error);
+        setEventImageUrls({});
+      } finally {
+        setLoadingImages(false);
+      }
+    };
+
+    fetchAllImageUrls();
+  }, [events]);
   
   if (!date) return null;
   
@@ -136,11 +192,17 @@ export default function DayEventsModal({ date, events, isOpen, onClose, onEventC
                     )}
                     <div className="flex gap-4 w-full">
                       {event.images && event.images.length > 0 && (
-                        <img 
-                          src={event.images[0]} 
-                          alt={event.title}
-                          className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
-                        />
+                        <>
+                          {loadingImages ? (
+                            <div className="w-20 h-20 bg-muted animate-pulse rounded-lg flex-shrink-0" />
+                          ) : eventImageUrls[event.id]?.[0] ? (
+                            <img 
+                              src={eventImageUrls[event.id][0]} 
+                              alt={event.title}
+                              className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
+                            />
+                          ) : null}
+                        </>
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-2">

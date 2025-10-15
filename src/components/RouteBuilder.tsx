@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Trash2 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
-import { ROUTE_POINT_TYPE_VALUES } from '@/../amplify/config/enums';
+import { ROUTE_POINT_TYPE_VALUES, ROUTE_POINT_COLORS } from '@/../amplify/config/enums';
 
 // Fix for default marker icons in react-leaflet
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -28,16 +28,6 @@ interface RoutePoint {
   description: string;
   order: number;
 }
-
-// Color mapping for different waypoint types
-const MARKER_COLORS: Record<RoutePoint['type'], string> = {
-  'Start': '#22c55e',      // Green
-  'End': '#ef4444',        // Red
-  'Waypoint': '#3b82f6',   // Blue
-  'Stop': '#f97316',       // Orange
-  'Join_In': '#a855f7',    // Purple
-  'Blockers': '#eab308',   // Yellow
-};
 
 interface RouteBuilderProps {
   value: RoutePoint[];
@@ -64,6 +54,8 @@ export default function RouteBuilder({ value, onChange, center = [39.8283, -98.5
   const [routeLine, setRouteLine] = useState<[number, number][]>([]);
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
   const [isFetchingRoute, setIsFetchingRoute] = useState(false);
+  const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
+  const [hasInitiallyZoomed, setHasInitiallyZoomed] = useState(false);
   
   // Zoom level: 4 shows entire US, higher if user has selected a location
   const mapZoom = center ? 4 : 6;
@@ -104,6 +96,13 @@ export default function RouteBuilder({ value, onChange, center = [39.8283, -98.5
             distance: route.distance,
             duration: route.duration,
           });
+          
+          // Auto-zoom to fit route on initial load (when editing an event with existing route)
+          if (mapInstance && !hasInitiallyZoomed && routePoints.length > 0) {
+            const bounds = L.latLngBounds(routePoints.map(p => [p.latitude, p.longitude]));
+            mapInstance.fitBounds(bounds, { padding: [50, 50] });
+            setHasInitiallyZoomed(true);
+          }
         } else {
           setRouteLine([]);
           setRouteInfo(null);
@@ -118,7 +117,7 @@ export default function RouteBuilder({ value, onChange, center = [39.8283, -98.5
     };
 
     fetchRoute();
-  }, [routePoints]);
+  }, [routePoints, mapInstance, hasInitiallyZoomed]);
 
   const handleMapClick = useCallback((lat: number, lng: number) => {
     if (isFetchingRoute) return;
@@ -220,6 +219,7 @@ export default function RouteBuilder({ value, onChange, center = [39.8283, -98.5
               center={center}
               zoom={mapZoom}
               style={{ height: '100%', width: '100%', cursor: 'crosshair' }}
+              ref={setMapInstance}
             >
               <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -241,7 +241,7 @@ export default function RouteBuilder({ value, onChange, center = [39.8283, -98.5
                   key={index}
                   position={[point.latitude, point.longitude]}
                   draggable={true}
-                  icon={createColoredIcon(MARKER_COLORS[point.type])}
+                  icon={createColoredIcon(ROUTE_POINT_COLORS[point.type])}
                   eventHandlers={{
                     dragend: (e) => {
                       const marker = e.target;

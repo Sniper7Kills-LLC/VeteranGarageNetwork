@@ -118,3 +118,18 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Print styles to hide website header/footer */
+@media print {
+  /* Hide browser default header/footer */
+  @page {
+    margin: 0.5in;
+    size: letter;
+  }
+  
+  /* Reset body for printing */
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}

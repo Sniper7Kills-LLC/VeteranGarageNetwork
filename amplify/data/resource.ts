@@ -36,7 +36,8 @@ const schema = a.schema({
       // Admin & System Fields
       approved: a.boolean().default(false).authorization((allow) => [
         allow.authenticated().to(['create']),
-        allow.groups(['admin']).to(['read', 'update']),
+        allow.owner().to(['delete']),
+        allow.groups(['admin']).to(['read', 'update', 'delete']),
       ]),
       // NOTE: 'owners' is an array of Cognito User Pool 'sub' identifiers
       // Supports multiple owners for a single club
@@ -84,7 +85,8 @@ const schema = a.schema({
       // Admin & System Fields
       approved: a.boolean().default(false).authorization((allow) => [
         allow.authenticated().to(['create']),
-        allow.groups(['admin']).to(['read', 'update']),
+        allow.owner().to(['delete']),
+        allow.groups(['admin']).to(['read', 'update', 'delete']),
       ]),
       // NOTE: 'owners' is an array of Cognito User Pool 'sub' identifiers
       // Supports multiple owners for a single chapter
@@ -183,7 +185,8 @@ const schema = a.schema({
       // Admin & System Fields
       approved: a.boolean().default(false).authorization((allow) => [
         allow.authenticated().to(['create']),
-        allow.groups(['admin']).to(['read', 'update']),
+        allow.owner().to(['delete']),
+        allow.groups(['admin']).to(['read', 'update', 'delete']),
       ]),
       // NOTE: 'owners' is an array of Cognito User Pool 'sub' identifiers
       // Supports multiple owners for a single shop
@@ -221,9 +224,10 @@ const schema = a.schema({
       details: a.string(),
       
       // Admin & System Fields
-      approved: a.boolean().default(false).authorization((allow) => [
+      approved: a.boolean().default(true).authorization((allow) => [
         allow.authenticated().to(['create']),
-        allow.groups(['admin']).to(['read', 'update']),
+        allow.owner().to(['delete']),
+        allow.groups(['admin']).to(['read', 'update', 'delete']),
       ]),
       
       // Special Notes for Approval
@@ -254,9 +258,9 @@ const schema = a.schema({
       details: a.string(),
       
       // Admin & System Fields
-      approved: a.boolean().default(false).authorization((allow) => [
+      approved: a.boolean().default(true).authorization((allow) => [
         allow.authenticated().to(['create']),
-        allow.groups(['admin']).to(['read', 'update']),
+        allow.groups(['admin']).to(['read', 'update','delete']),
       ]),
 
       
@@ -311,7 +315,8 @@ const schema = a.schema({
       // Admin & System Fields
       approved: a.boolean().default(false).authorization((allow) => [
         allow.authenticated().to(['create']),
-        allow.groups(['admin']).to(['read', 'update']),
+        allow.owner().to(['delete']),
+        allow.groups(['admin']).to(['read', 'update', 'delete']),
       ]),
       // NOTE: 'owners' is an array of Cognito User Pool 'sub' identifiers
       // Supports multiple owners for a single event
@@ -348,9 +353,10 @@ const schema = a.schema({
       details: a.string(),
       
       // Admin & System Fields
-      approved: a.boolean().default(false).authorization((allow) => [
+      approved: a.boolean().default(true).authorization((allow) => [
         allow.authenticated().to(['create']),
-        allow.groups(['admin']).to(['read', 'update']),
+        allow.owner().to(['delete']),
+        allow.groups(['admin']).to(['read', 'update', 'delete']),
       ]),
       // NOTE: 'owner' field is automatically managed by Amplify via allow.owner() authorization
       // It is populated with the user's Cognito User Pool 'sub' on record creation

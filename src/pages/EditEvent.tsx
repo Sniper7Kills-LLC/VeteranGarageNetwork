@@ -91,6 +91,14 @@ export default function EditEvent() {
           authMode: 'userPool',
         });
 
+        // Deduplicate associations by chapterId (keep the first occurrence)
+        const uniqueAssociations = associations?.reduce((acc, assoc) => {
+          if (!acc.some(a => a.chapterId === assoc.chapterId)) {
+            acc.push(assoc);
+          }
+          return acc;
+        }, [] as typeof associations) || [];
+
         // Transform to EventFormData
         const formData: EventFormData = {
           id: eventData.id,
@@ -113,11 +121,11 @@ export default function EditEvent() {
             order: point!.order,
           })) || undefined,
           images: eventData.images?.filter((img): img is string => img !== null) || undefined,
-          chapterAssociations: associations?.map(assoc => ({
+          chapterAssociations: uniqueAssociations.map(assoc => ({
             chapterId: assoc.chapterId,
             relationship: assoc.relationship,
             details: assoc.details || undefined,
-          })) || undefined,
+          })),
         };
 
         setEvent(formData);
@@ -180,11 +188,39 @@ export default function EditEvent() {
       });
 
       if (existingAssociations && existingAssociations.length > 0) {
-        await Promise.all(
-          existingAssociations.map(assoc =>
-            client.models.EventChapterAssociation.delete({ id: assoc.id }, { authMode: 'userPool' })
-          )
+        console.log(`Attempting to delete ${existingAssociations.length} existing chapter associations`);
+        
+        const deleteResults = await Promise.all(
+          existingAssociations.map(async (assoc) => {
+            try {
+              const result = await client.models.EventChapterAssociation.delete(
+                { id: assoc.id }, 
+                { authMode: 'userPool' }
+              );
+              
+              if (result.errors && result.errors.length > 0) {
+                console.error(`Failed to delete association ${assoc.id}:`, result.errors);
+                return { success: false, id: assoc.id, errors: result.errors };
+              }
+              
+              console.log(`Successfully deleted association ${assoc.id}`);
+              return { success: true, id: assoc.id };
+            } catch (error) {
+              console.error(`Exception deleting association ${assoc.id}:`, error);
+              return { success: false, id: assoc.id, error };
+            }
+          })
         );
+        
+        const failedDeletions = deleteResults.filter(r => !r.success);
+        if (failedDeletions.length > 0) {
+          console.warn(`${failedDeletions.length} associations failed to delete:`, failedDeletions);
+          toast.warning('Some existing associations could not be removed', {
+            description: 'This may result in duplicate associations. Please contact support if this persists.',
+          });
+        } else {
+          console.log('All existing associations deleted successfully');
+        }
       }
 
       // Create new associations

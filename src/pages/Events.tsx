@@ -24,6 +24,14 @@ import type { Schema } from "@/../amplify/data/resource";
 // Import event categories from centralized config
 import { EVENT_CATEGORY_VALUES, EVENT_CATEGORY_DESCRIPTIONS } from '@/../amplify/config/enums';
 
+interface RoutePoint {
+  latitude: number;
+  longitude: number;
+  type: string;
+  description: string;
+  order: number;
+}
+
 interface Event {
   id: string;
   title: string;
@@ -36,6 +44,7 @@ interface Event {
   lat: number;
   lng: number;
   route?: [number, number][]; // Array of [lat, lng] coordinates for ride routes
+  routePoints?: RoutePoint[]; // Full route point data with types and descriptions
   approved?: boolean; // Track approval status
 }
 
@@ -173,11 +182,21 @@ export default function Events() {
           
           // Transform route data if present
           let route: [number, number][] | undefined;
+          let routePoints: RoutePoint[] | undefined;
           if (event.route && Array.isArray(event.route)) {
-            route = event.route
+            const sortedRoute = event.route
               .filter((point): point is NonNullable<typeof point> => point !== null)
-              .sort((a, b) => (a.order || 0) - (b.order || 0))
-              .map(point => [point.latitude, point.longitude] as [number, number]);
+              .sort((a, b) => (a.order || 0) - (b.order || 0));
+            
+            route = sortedRoute.map(point => [point.latitude, point.longitude] as [number, number]);
+            
+            routePoints = sortedRoute.map(point => ({
+              latitude: point.latitude,
+              longitude: point.longitude,
+              type: point.type || 'Waypoint',
+              description: point.description || '',
+              order: point.order || 0,
+            }));
           }
           
           return {
@@ -192,6 +211,7 @@ export default function Events() {
             lat: event.latitude,
             lng: event.longitude,
             route,
+            routePoints,
             approved: event.approved ?? true,
           };
         });

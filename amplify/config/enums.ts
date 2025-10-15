@@ -147,3 +147,13 @@ export const ROUTE_POINT_TYPE_DESCRIPTIONS: Record<string, string> = {
   'Join_In': 'Point where additional riders can join the group',
   'Blockers': 'Location where traffic control blockers will be deployed'
 };
+
+// Route Point Colors - Color mapping for different waypoint types
+export const ROUTE_POINT_COLORS: Record<RoutePointType, string> = {
+  'Start': '#22c55e',      // Green
+  'End': '#ef4444',        // Red
+  'Waypoint': '#3b82f6',   // Blue
+  'Stop': '#f97316',       // Orange
+  'Join_In': '#a855f7',    // Purple
+  'Blockers': '#eab308',   // Yellow
+};

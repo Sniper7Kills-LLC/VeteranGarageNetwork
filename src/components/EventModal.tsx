@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Clock, MapPin, Map as MapIcon, ArrowLeft } from 'lucide-react';
+import { Calendar, Clock, MapPin, Map as MapIcon, ArrowLeft, FileText } from 'lucide-react';
 import { getUrl } from 'aws-amplify/storage';
 import {
   Dialog,
@@ -12,6 +12,15 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Map from '@/components/Map';
+import { ROUTE_POINT_COLORS } from '@/../amplify/config/enums';
+
+interface RoutePoint {
+  latitude: number;
+  longitude: number;
+  type: string;
+  description: string;
+  order: number;
+}
 
 interface Event {
   id: string;
@@ -25,6 +34,7 @@ interface Event {
   lat: number;
   lng: number;
   route?: [number, number][];
+  routePoints?: RoutePoint[];
 }
 
 interface EventModalProps {
@@ -92,6 +102,9 @@ export default function EventModal({ event, isOpen, onClose, isOwner = false }: 
   };
 
   const isRideEvent = event.category === 'Ride' && event.route && event.route.length > 0;
+
+  // Filter out generic "Waypoint" type points for display
+  const displayableWaypoints = event.routePoints?.filter(point => point.type !== 'Waypoint') || [];
 
   // Calculate center point for route map
   const routeCenter: [number, number] = event.route && event.route.length > 0
@@ -186,16 +199,31 @@ export default function EventModal({ event, isOpen, onClose, isOwner = false }: 
                 </p>
               </div>
 
-              {/* View Map button for Ride events */}
-              {isRideEvent && (
+              {/* Action buttons */}
+              <div className="space-y-2">
+                {/* View Map button for Ride events */}
+                {isRideEvent && (
+                  <Button
+                    onClick={() => setShowMap(true)}
+                    className="w-full flex items-center justify-center gap-2"
+                  >
+                    <MapIcon className="w-4 h-4" />
+                    View Route Map
+                  </Button>
+                )}
+                
+                {/* View Flyer button */}
                 <Button
-                  onClick={() => setShowMap(true)}
+                  variant="outline"
+                  onClick={() => {
+                    window.open(`/events/flyer/${event.id}`, '_blank');
+                  }}
                   className="w-full flex items-center justify-center gap-2"
                 >
-                  <MapIcon className="w-4 h-4" />
-                  View Route Map
+                  <FileText className="w-4 h-4" />
+                  View Flyer
                 </Button>
-              )}
+              </div>
             </div>
 
             {isOwner && (
@@ -233,17 +261,72 @@ export default function EventModal({ event, isOpen, onClose, isOwner = false }: 
               center={routeCenter}
               zoom={12}
               route={event.route}
+              routePoints={event.routePoints}
               showRouteMarkers={true}
             />
 
-            <div className="mt-4 p-4 bg-muted rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                <span className="text-sm font-medium">Route Path</span>
+            {/* Waypoints List */}
+            {displayableWaypoints.length > 0 && (
+              <div className="mt-4 space-y-3">
+                <h3 className="font-semibold text-sm">Route Points</h3>
+                <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                  {displayableWaypoints.map((point, index) => {
+                    const color = ROUTE_POINT_COLORS[point.type as keyof typeof ROUTE_POINT_COLORS] || '#3b82f6';
+                    
+                    return (
+                      <div key={index} className="p-3 bg-muted rounded-lg">
+                        <div className="flex items-start gap-3">
+                          <div 
+                            className="w-4 h-4 rounded-full mt-0.5 flex-shrink-0" 
+                            style={{ backgroundColor: color }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-medium text-sm">
+                                {point.type.replace(/_/g, ' ')}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                #{point.order}
+                              </span>
+                            </div>
+                            {point.description && (
+                              <p className="text-sm text-muted-foreground mb-1">
+                                {point.description}
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground">
+                              {point.latitude.toFixed(4)}, {point.longitude.toFixed(4)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <p className="text-sm text-muted-foreground">
-                The blue line shows the planned route for this ride. Start and end points are marked with pins.
-              </p>
+            )}
+
+            {/* Legend */}
+            <div className="mt-4 p-4 bg-muted rounded-lg">
+              <h3 className="font-semibold text-sm mb-3">Legend</h3>
+              <div className="grid grid-cols-2 gap-2">
+                {Object.entries(ROUTE_POINT_COLORS)
+                  .filter(([type]) => type !== 'Waypoint')
+                  .map(([type, color]) => (
+                    <div key={type} className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full flex-shrink-0" 
+                        style={{ backgroundColor: color }}
+                      />
+                      <span className="text-xs">{type.replace(/_/g, ' ')}</span>
+                    </div>
+                  ))}
+              </div>
+              <div className="mt-3 pt-3 border-t border-border">
+                <p className="text-xs text-muted-foreground">
+                  The blue line shows the planned route path.
+                </p>
+              </div>
             </div>
           </div>
         )}

@@ -38,6 +38,10 @@ export const router = createBrowserRouter([
         Component: lazy(() => import('./pages/Events')),
       },
       {
+        path: 'events/flyer/:id',
+        Component: lazy(() => import('./pages/EventFlyer')),
+      },
+      {
         path: 'events/create',
         element: <ProtectedRoute />,
         children: [

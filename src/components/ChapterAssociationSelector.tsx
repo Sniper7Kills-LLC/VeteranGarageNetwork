@@ -3,6 +3,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { X } from 'lucide-react';
 import { ASSOCIATION_RELATIONSHIP_VALUES, ASSOCIATION_RELATIONSHIP_DESCRIPTIONS } from '@/../amplify/config/enums';
 
 interface Chapter {
@@ -128,9 +129,21 @@ export default function ChapterAssociationSelector({
 
             return (
               <div key={chapterId} className="p-4 border border-border rounded-md space-y-3">
-                <div className="font-medium">
-                  {chapter.name}
-                  <span className="text-sm text-muted-foreground ml-2">({chapter.clubName})</span>
+                <div className="flex items-start justify-between">
+                  <div className="font-medium">
+                    {chapter.name}
+                    <span className="text-sm text-muted-foreground ml-2">({chapter.clubName})</span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onChapterToggle(chapterId)}
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                    title="Remove association"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
 
                 <div>
