@@ -101,68 +101,20 @@ export default function Events() {
         const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
         
         // Fetch approved events (visible to everyone)
-        const { data: approvedEvents } = await client.models.Event.list({
-          selectionSet: [
-            'id',
-            'title',
-            'description',
-            'date',
-            'time',
-            'category',
-            'address',
-            'city',
-            'state',
-            'zipCode',
-            'latitude',
-            'longitude',
-            'route.*',
-            'images',
-            'approved',
-            'chapterAssociations.id',
-            'chapterAssociations.relationship',
-            'chapterAssociations.chapter.id',
-            'chapterAssociations.chapter.name',
-          ],
-          authMode,
-          filter: { approved: { eq: true } }
-        });
+        const { data: approvedEvents } = await client.queries.listPublicEvents(
+          {},
+          { authMode }
+        );
         
         let allEvents = approvedEvents || [];
         
         // For authenticated users, also fetch their unapproved events
-        if (authStatus === 'authenticated' && user?.userId) {
+        if (authStatus === 'authenticated') {
           try {
-            const { data: userEvents } = await client.models.Event.list({
-              selectionSet: [
-                'id',
-                'title',
-                'description',
-                'date',
-                'time',
-                'category',
-                'address',
-                'city',
-                'state',
-                'zipCode',
-                'latitude',
-                'longitude',
-                'route.*',
-                'images',
-                'approved',
-                'owners',
-                'chapterAssociations.id',
-                'chapterAssociations.relationship',
-                'chapterAssociations.chapter.id',
-                'chapterAssociations.chapter.name',
-              ],
-              authMode: 'userPool',
-              filter: { 
-                and: [
-                  { approved: { eq: false } },
-                  { owners: { contains: user.userId } }
-                ]
-              }
-            });
+            const { data: userEvents } = await client.queries.listMyEvents(
+              { approved: false },
+              { authMode: 'userPool' }
+            );
             
             // Merge user's unapproved events with approved events
             if (userEvents && userEvents.length > 0) {
@@ -175,7 +127,9 @@ export default function Events() {
         }
         
         // Transform events to match the Event interface
-        const transformedEvents: Event[] = allEvents.map(event => {
+        const transformedEvents: Event[] = allEvents
+          .filter((event): event is NonNullable<typeof event> => event !== null)
+          .map(event => {
           // Build location string
           const locationParts = [event.address, event.city, event.state].filter(Boolean);
           const location = locationParts.join(', ') || 'Location TBD';

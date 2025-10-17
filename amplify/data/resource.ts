@@ -43,8 +43,7 @@ const schema = a.schema({
       // Supports multiple owners for a single club
       // Must be manually populated on creation and managed by the application
       owners: a.string().array().authorization((allow) => [
-        allow.guest().to(['read']),
-        allow.authenticated().to(['read', 'create']),
+        allow.authenticated().to(['create']),
         allow.ownersDefinedIn('owners').to(['read', 'update', 'delete']),
         allow.groups(['admin']).to(['read', 'update', 'delete'])
       ]),
@@ -61,8 +60,8 @@ const schema = a.schema({
       shopAssociations: a.hasMany('ClubAssociation', 'clubId'),
     })
     .authorization((allow) => [
-      allow.guest().to(['read']),
-      allow.authenticated().to(['read', 'create']),
+      // Removed guest and general authenticated read - must use custom queries
+      allow.authenticated().to(['create']),
       allow.ownersDefinedIn('owners').to(['read', 'update', 'delete']),
       allow.groups(['admin']).to(['read', 'update', 'delete']),
     ]),
@@ -92,8 +91,7 @@ const schema = a.schema({
       // Supports multiple owners for a single chapter
       // Must be manually populated on creation and managed by the application
       owners: a.string().array().authorization((allow) => [
-        allow.guest().to(['read']),
-        allow.authenticated().to(['read', 'create']),
+        allow.authenticated().to(['create']),
         allow.ownersDefinedIn('owners').to(['read', 'update', 'delete']),
         allow.groups(['admin']).to(['read', 'update', 'delete'])
       ]),
@@ -113,8 +111,8 @@ const schema = a.schema({
       eventAssociations: a.hasMany('EventChapterAssociation', 'chapterId'),
     })
     .authorization((allow) => [
-      allow.guest().to(['read']),
-      allow.authenticated().to(['read', 'create']),
+      // Removed guest and general authenticated read - must use custom queries
+      allow.authenticated().to(['create']),
       allow.ownersDefinedIn('owners').to(['read', 'update', 'delete']),
       allow.groups(['admin']).to(['read', 'update', 'delete']),
     ]),
@@ -192,8 +190,7 @@ const schema = a.schema({
       // Supports multiple owners for a single shop
       // Must be manually populated on creation and managed by the application
       owners: a.string().array().authorization((allow) => [
-        allow.guest().to(['read']),
-        allow.authenticated().to(['read', 'create']),
+        allow.authenticated().to(['create']),
         allow.ownersDefinedIn('owners').to(['read', 'update', 'delete']),
         allow.groups(['admin']).to(['read', 'update', 'delete'])
       ]),
@@ -210,8 +207,8 @@ const schema = a.schema({
       chapterAssociations: a.hasMany('ChapterAssociation', 'shopId'),
     })
     .authorization((allow) => [
-      allow.guest().to(['read']),
-      allow.authenticated().to(['read', 'create']),
+      // Removed guest and general authenticated read - must use custom queries
+      allow.authenticated().to(['create']),
       allow.ownersDefinedIn('owners').to(['read', 'update', 'delete']),
       allow.groups(['admin']).to(['read', 'update', 'delete']),
     ]),
@@ -244,8 +241,8 @@ const schema = a.schema({
       club: a.belongsTo('Club', 'clubId'),
     })
     .authorization((allow) => [
-      allow.guest().to(['read']),
-      allow.authenticated().to(['read', 'create']),
+      // Removed guest and general authenticated read - must use custom queries
+      allow.authenticated().to(['create']),
       allow.owner().to(['read', 'update', 'delete']),
       allow.groups(['admin']).to(['read', 'update', 'delete']),
     ]),
@@ -278,8 +275,8 @@ const schema = a.schema({
       chapter: a.belongsTo('ClubChapter', 'chapterId'),
     })
     .authorization((allow) => [
-      allow.guest().to(['read']),
-      allow.authenticated().to(['read', 'create']),
+      // Removed guest and general authenticated read - must use custom queries
+      allow.authenticated().to(['create']),
       allow.owner().to(['read', 'update', 'delete']),
       allow.groups(['admin']).to(['read', 'update', 'delete']),
     ]),
@@ -322,8 +319,7 @@ const schema = a.schema({
       // Supports multiple owners for a single event
       // Must be manually populated on creation and managed by the application
       owners: a.string().array().authorization((allow) => [
-        allow.guest().to(['read']),
-        allow.authenticated().to(['read', 'create']),
+        allow.authenticated().to(['create']),
         allow.ownersDefinedIn('owners').to(['read', 'update', 'delete']),
         allow.groups(['admin']).to(['read', 'update', 'delete'])
       ]),
@@ -339,8 +335,8 @@ const schema = a.schema({
       chapterAssociations: a.hasMany('EventChapterAssociation', 'eventId'),
     })
     .authorization((allow) => [
-      allow.guest().to(['read']),
-      allow.authenticated().to(['read', 'create']),
+      // Removed guest and general authenticated read - must use custom queries
+      allow.authenticated().to(['create']),
       allow.ownersDefinedIn('owners').to(['read', 'update', 'delete']),
       allow.groups(['admin']).to(['read', 'update', 'delete']),
     ]),
@@ -376,14 +372,348 @@ const schema = a.schema({
       chapter: a.belongsTo('ClubChapter', 'chapterId'),
     })
     .authorization((allow) => [
-      allow.guest().to(['read']),
-      allow.authenticated().to(['read', 'create']),
+      // Removed guest and general authenticated read - must use custom queries
+      allow.authenticated().to(['create']),
       allow.owner().to(['read', 'update', 'delete']),
       allow.groups(['admin']).to(['read', 'update', 'delete']),
     ]),
 
   // ============================================================================
-  // QUERIES
+  // CUSTOM QUERIES - PUBLIC ACCESS
+  // ============================================================================
+
+  // Club Queries
+  listPublicClubs: a
+    .query()
+    .returns(a.ref('Club').array())
+    .handler(a.handler.custom({
+      dataSource: 'ClubTable',
+      entry: './resolvers/clubs/listPublicClubs.js'
+    }))
+    .authorization((allow) => [allow.guest(), allow.authenticated()]),
+
+  getPublicClub: a
+    .query()
+    .arguments({ id: a.id().required() })
+    .returns(a.ref('Club'))
+    .handler(a.handler.custom({
+      dataSource: 'ClubTable',
+      entry: './resolvers/clubs/getPublicClub.js'
+    }))
+    .authorization((allow) => [allow.guest(), allow.authenticated()]),
+
+  // Chapter Queries
+  listPublicChapters: a
+    .query()
+    .arguments({
+      minLat: a.float(),
+      maxLat: a.float(),
+      minLng: a.float(),
+      maxLng: a.float(),
+      clubIds: a.id().array()
+    })
+    .returns(a.ref('ClubChapter').array())
+    .handler(a.handler.custom({
+      dataSource: 'ClubChapterTable',
+      entry: './resolvers/chapters/listPublicChapters.js'
+    }))
+    .authorization((allow) => [allow.guest(), allow.authenticated()]),
+
+  getPublicChapter: a
+    .query()
+    .arguments({ id: a.id().required() })
+    .returns(a.ref('ClubChapter'))
+    .handler(a.handler.custom({
+      dataSource: 'ClubChapterTable',
+      entry: './resolvers/chapters/getPublicChapter.js'
+    }))
+    .authorization((allow) => [allow.guest(), allow.authenticated()]),
+
+  // Shop Queries
+  listPublicShops: a
+    .query()
+    .arguments({
+      minLat: a.float(),
+      maxLat: a.float(),
+      minLng: a.float(),
+      maxLng: a.float()
+    })
+    .returns(a.ref('Shop').array())
+    .handler(a.handler.custom({
+      dataSource: 'ShopTable',
+      entry: './resolvers/shops/listPublicShops.js'
+    }))
+    .authorization((allow) => [allow.guest(), allow.authenticated()]),
+
+  getPublicShop: a
+    .query()
+    .arguments({ id: a.id().required() })
+    .returns(a.ref('Shop'))
+    .handler(a.handler.custom({
+      dataSource: 'ShopTable',
+      entry: './resolvers/shops/getPublicShop.js'
+    }))
+    .authorization((allow) => [allow.guest(), allow.authenticated()]),
+
+  // Event Queries
+  listPublicEvents: a
+    .query()
+    .arguments({
+      minLat: a.float(),
+      maxLat: a.float(),
+      minLng: a.float(),
+      maxLng: a.float()
+    })
+    .returns(a.ref('Event').array())
+    .handler(a.handler.custom({
+      dataSource: 'EventTable',
+      entry: './resolvers/events/listPublicEvents.js'
+    }))
+    .authorization((allow) => [allow.guest(), allow.authenticated()]),
+
+  getPublicEvent: a
+    .query()
+    .arguments({ id: a.id().required() })
+    .returns(a.ref('Event'))
+    .handler(a.handler.custom({
+      dataSource: 'EventTable',
+      entry: './resolvers/events/getPublicEvent.js'
+    }))
+    .authorization((allow) => [allow.guest(), allow.authenticated()]),
+
+  // Association Queries
+  listPublicClubChapters: a
+    .query()
+    .arguments({
+      clubId: a.id().required(),
+      minLat: a.float(),
+      maxLat: a.float(),
+      minLng: a.float(),
+      maxLng: a.float()
+    })
+    .returns(a.ref('ClubChapter').array())
+    .handler(a.handler.custom({
+      dataSource: 'ClubChapterTable',
+      entry: './resolvers/associations/listPublicClubChapters.js'
+    }))
+    .authorization((allow) => [allow.guest(), allow.authenticated()]),
+
+  listPublicClubAssociations: a
+    .query()
+    .arguments({ clubId: a.id().required() })
+    .returns(a.ref('ClubAssociation').array())
+    .handler(a.handler.custom({
+      dataSource: 'ClubAssociationTable',
+      entry: './resolvers/associations/listPublicClubAssociations.js'
+    }))
+    .authorization((allow) => [allow.guest(), allow.authenticated()]),
+
+  listPublicChapterAssociations: a
+    .query()
+    .arguments({ chapterId: a.id().required() })
+    .returns(a.ref('ChapterAssociation').array())
+    .handler(a.handler.custom({
+      dataSource: 'ChapterAssociationTable',
+      entry: './resolvers/associations/listPublicChapterAssociations.js'
+    }))
+    .authorization((allow) => [allow.guest(), allow.authenticated()]),
+
+  listPublicEventAssociations: a
+    .query()
+    .arguments({ eventId: a.id().required() })
+    .returns(a.ref('EventChapterAssociation').array())
+    .handler(a.handler.custom({
+      dataSource: 'EventChapterAssociationTable',
+      entry: './resolvers/associations/listPublicEventAssociations.js'
+    }))
+    .authorization((allow) => [allow.guest(), allow.authenticated()]),
+
+  // ============================================================================
+  // CUSTOM QUERIES - AUTHENTICATED USER ACCESS
+  // ============================================================================
+
+  listMyClubs: a
+    .query()
+    .arguments({
+      approved: a.boolean()
+    })
+    .returns(a.ref('Club').array())
+    .handler(a.handler.custom({
+      dataSource: 'ClubTable',
+      entry: './resolvers/clubs/listMyClubs.js'
+    }))
+    .authorization((allow) => [allow.authenticated()]),
+
+  listMyChapters: a
+    .query()
+    .arguments({
+      approved: a.boolean(),
+      minLat: a.float(),
+      maxLat: a.float(),
+      minLng: a.float(),
+      maxLng: a.float()
+    })
+    .returns(a.ref('ClubChapter').array())
+    .handler(a.handler.custom({
+      dataSource: 'ClubChapterTable',
+      entry: './resolvers/chapters/listMyChapters.js'
+    }))
+    .authorization((allow) => [allow.authenticated()]),
+
+  listMyShops: a
+    .query()
+    .arguments({
+      approved: a.boolean(),
+      minLat: a.float(),
+      maxLat: a.float(),
+      minLng: a.float(),
+      maxLng: a.float()
+    })
+    .returns(a.ref('Shop').array())
+    .handler(a.handler.custom({
+      dataSource: 'ShopTable',
+      entry: './resolvers/shops/listMyShops.js'
+    }))
+    .authorization((allow) => [allow.authenticated()]),
+
+  listMyEvents: a
+    .query()
+    .arguments({
+      approved: a.boolean(),
+      minLat: a.float(),
+      maxLat: a.float(),
+      minLng: a.float(),
+      maxLng: a.float()
+    })
+    .returns(a.ref('Event').array())
+    .handler(a.handler.custom({
+      dataSource: 'EventTable',
+      entry: './resolvers/events/listMyEvents.js'
+    }))
+    .authorization((allow) => [allow.authenticated()]),
+
+  // ============================================================================
+  // CUSTOM QUERIES - ADMIN ACCESS
+  // ============================================================================
+
+  // Unapproved Items
+  listUnapprovedClubs: a
+    .query()
+    .returns(a.ref('Club').array())
+    .handler(a.handler.custom({
+      dataSource: 'ClubTable',
+      entry: './resolvers/clubs/listUnapprovedClubs.js'
+    }))
+    .authorization((allow) => [allow.groups(['admin'])]),
+
+  listUnapprovedChapters: a
+    .query()
+    .arguments({
+      minLat: a.float(),
+      maxLat: a.float(),
+      minLng: a.float(),
+      maxLng: a.float()
+    })
+    .returns(a.ref('ClubChapter').array())
+    .handler(a.handler.custom({
+      dataSource: 'ClubChapterTable',
+      entry: './resolvers/chapters/listUnapprovedChapters.js'
+    }))
+    .authorization((allow) => [allow.groups(['admin'])]),
+
+  listUnapprovedShops: a
+    .query()
+    .arguments({
+      minLat: a.float(),
+      maxLat: a.float(),
+      minLng: a.float(),
+      maxLng: a.float()
+    })
+    .returns(a.ref('Shop').array())
+    .handler(a.handler.custom({
+      dataSource: 'ShopTable',
+      entry: './resolvers/shops/listUnapprovedShops.js'
+    }))
+    .authorization((allow) => [allow.groups(['admin'])]),
+
+  listUnapprovedEvents: a
+    .query()
+    .arguments({
+      minLat: a.float(),
+      maxLat: a.float(),
+      minLng: a.float(),
+      maxLng: a.float()
+    })
+    .returns(a.ref('Event').array())
+    .handler(a.handler.custom({
+      dataSource: 'EventTable',
+      entry: './resolvers/events/listUnapprovedEvents.js'
+    }))
+    .authorization((allow) => [allow.groups(['admin'])]),
+
+  // All Items (with optional filters)
+  listAllClubs: a
+    .query()
+    .arguments({
+      approved: a.boolean()
+    })
+    .returns(a.ref('Club').array())
+    .handler(a.handler.custom({
+      dataSource: 'ClubTable',
+      entry: './resolvers/clubs/listAllClubs.js'
+    }))
+    .authorization((allow) => [allow.groups(['admin'])]),
+
+  listAllChapters: a
+    .query()
+    .arguments({
+      approved: a.boolean(),
+      minLat: a.float(),
+      maxLat: a.float(),
+      minLng: a.float(),
+      maxLng: a.float()
+    })
+    .returns(a.ref('ClubChapter').array())
+    .handler(a.handler.custom({
+      dataSource: 'ClubChapterTable',
+      entry: './resolvers/chapters/listAllChapters.js'
+    }))
+    .authorization((allow) => [allow.groups(['admin'])]),
+
+  listAllShops: a
+    .query()
+    .arguments({
+      approved: a.boolean(),
+      minLat: a.float(),
+      maxLat: a.float(),
+      minLng: a.float(),
+      maxLng: a.float()
+    })
+    .returns(a.ref('Shop').array())
+    .handler(a.handler.custom({
+      dataSource: 'ShopTable',
+      entry: './resolvers/shops/listAllShops.js'
+    }))
+    .authorization((allow) => [allow.groups(['admin'])]),
+
+  listAllEvents: a
+    .query()
+    .arguments({
+      approved: a.boolean(),
+      minLat: a.float(),
+      maxLat: a.float(),
+      minLng: a.float(),
+      maxLng: a.float()
+    })
+    .returns(a.ref('Event').array())
+    .handler(a.handler.custom({
+      dataSource: 'EventTable',
+      entry: './resolvers/events/listAllEvents.js'
+    }))
+    .authorization((allow) => [allow.groups(['admin'])]),
+
+  // ============================================================================
+  // LAMBDA FUNCTION QUERIES
   // ============================================================================
 
   getStats: a

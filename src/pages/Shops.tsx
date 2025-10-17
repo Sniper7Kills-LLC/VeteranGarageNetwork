@@ -81,16 +81,15 @@ export default function Shops() {
         const client = generateClient<Schema>();
         const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
         
-        const { data: clubsData } = await client.models.Club.list({
-          selectionSet: ['id', 'name', 'type', 'description'],
-          authMode,
-          filter: { approved: { eq: true } }
+        const { data: clubsData } = await client.queries.listPublicClubs({
+          authMode
         });
         
-        setClubs(clubsData || []);
+        const filteredClubs = (clubsData || []).filter((club): club is NonNullable<typeof club> => club !== null);
+        setClubs(filteredClubs);
         // Initialize all clubs as selected, including "No Affiliation"
-        if (clubsData && clubsData.length > 0) {
-          setSelectedClubIds(new Set([...clubsData.map(club => club.id), NO_AFFILIATION_ID]));
+        if (filteredClubs && filteredClubs.length > 0) {
+          setSelectedClubIds(new Set([...filteredClubs.map(club => club.id), NO_AFFILIATION_ID]));
         } else {
           setSelectedClubIds(new Set([NO_AFFILIATION_ID]));
         }
@@ -111,55 +110,20 @@ export default function Shops() {
         const client = generateClient<Schema>();
         const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
         
-        // Build shop filter based on map bounds
-        const filters: Array<Record<string, unknown>> = [{ approved: { eq: true } }];
-        
-        // Add geographic bounds filter if available
-        if (mapBounds) {
-          filters.push({
-            latitude: { 
-              between: [mapBounds.southWest.lat, mapBounds.northEast.lat]
-            }
-          });
-          filters.push({
-            longitude: { 
-              between: [mapBounds.southWest.lng, mapBounds.northEast.lng]
-            }
-          });
-        }
-        
-        // Combine all filters with AND logic
-        const shopFilter = filters.length > 1 ? { and: filters } : filters[0];
-        
-        const { data: shopsData, nextToken } = await client.models.Shop.list({
-          selectionSet: [
-            'id',
-            'name',
-            'description',
-            'address',
-            'city',
-            'state',
-            'zipCode',
-            'latitude',
-            'longitude',
-            'phone',
-            'email',
-            'website',
-            'services',
-            'clubAssociations.id',
-            'clubAssociations.clubId',
-            'clubAssociations.relationship',
-            'clubAssociations.details',
-            'clubAssociations.club.id',
-            'clubAssociations.club.name',
-          ],
-          authMode,
-          filter: shopFilter,
-          limit: 1000,
-        });
+        const { data: shopsData } = await client.queries.listPublicShops(
+          {
+            minLat: mapBounds?.southWest.lat,
+            maxLat: mapBounds?.northEast.lat,
+            minLng: mapBounds?.southWest.lng,
+            maxLng: mapBounds?.northEast.lng,
+          },
+          { authMode }
+        );
         
         // Transform the data to match our Shop interface
-        const transformedShops: Shop[] = (shopsData || []).map(shop => ({
+        const transformedShops: Shop[] = (shopsData || [])
+          .filter((shop): shop is NonNullable<typeof shop> => shop !== null)
+          .map(shop => ({
           id: shop.id,
           name: shop.name,
           description: shop.description || undefined,
@@ -173,27 +137,12 @@ export default function Shops() {
           email: shop.email || undefined,
           website: shop.website || undefined,
           services: shop.services?.filter((s): s is string => s !== null) || undefined,
-          clubAssociations: (shop.clubAssociations || [])
-            .filter(assoc => assoc.club) // Only include associations with valid club data
-            .map(assoc => ({
-              id: assoc.id,
-              clubId: assoc.clubId,
-              clubName: assoc.club?.name || 'Unknown Club',
-              relationship: assoc.relationship,
-              details: assoc.details || undefined,
-            })),
+          clubAssociations: [], // Custom queries don't return nested associations
         }));
         
         setShops(transformedShops);
-        setShopNextToken(nextToken || null);
-        
-        // Fetch total count (without pagination)
-        const countResponse = await client.models.Shop.list({
-          selectionSet: ['id'],
-          authMode,
-          filter: shopFilter,
-        });
-        setTotalShops(countResponse.data?.length || 0);
+        setShopNextToken(null); // Custom queries don't support pagination yet
+        setTotalShops(transformedShops.length);
       } catch (error) {
         console.error('Error fetching shops:', error);
         setShops([]);
@@ -221,57 +170,21 @@ export default function Shops() {
       const client = generateClient<Schema>();
       const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
       
-      // Build shop filter based on map bounds
-      const filters: Array<Record<string, unknown>> = [{ approved: { eq: true } }];
-      
-      // Add geographic bounds filter if available
-      if (mapBounds) {
-        filters.push({
-          latitude: { 
-            between: [mapBounds.southWest.lat, mapBounds.northEast.lat]
-          }
-        });
-        filters.push({
-          longitude: { 
-            between: [mapBounds.southWest.lng, mapBounds.northEast.lng]
-          }
-        });
-      }
-      
-      // Combine all filters with AND logic
-      const shopFilter = filters.length > 1 ? { and: filters } : filters[0];
-      
       // Fetch next page
-      const response = await client.models.Shop.list({
-        selectionSet: [
-          'id',
-          'name',
-          'description',
-          'address',
-          'city',
-          'state',
-          'zipCode',
-          'latitude',
-          'longitude',
-          'phone',
-          'email',
-          'website',
-          'services',
-          'clubAssociations.id',
-          'clubAssociations.clubId',
-          'clubAssociations.relationship',
-          'clubAssociations.details',
-          'clubAssociations.club.id',
-          'clubAssociations.club.name',
-        ],
-        authMode,
-        filter: shopFilter,
-        limit: 1000,
-        nextToken: shopNextToken,
-      });
+      const response = await client.queries.listPublicShops(
+        {
+          minLat: mapBounds?.southWest.lat,
+          maxLat: mapBounds?.northEast.lat,
+          minLng: mapBounds?.southWest.lng,
+          maxLng: mapBounds?.northEast.lng,
+        },
+        { authMode }
+      );
       
       // Transform and append new shops to existing list
-      const newShops = (response.data || []).map(shop => ({
+      const newShops = (response.data || [])
+        .filter((shop): shop is NonNullable<typeof shop> => shop !== null)
+        .map(shop => ({
         id: shop.id,
         name: shop.name,
         description: shop.description || undefined,
@@ -285,21 +198,13 @@ export default function Shops() {
         email: shop.email || undefined,
         website: shop.website || undefined,
         services: shop.services?.filter((s): s is string => s !== null) || undefined,
-        clubAssociations: (shop.clubAssociations || [])
-          .filter(assoc => assoc.club)
-          .map(assoc => ({
-            id: assoc.id,
-            clubId: assoc.clubId,
-            clubName: assoc.club?.name || 'Unknown Club',
-            relationship: assoc.relationship,
-            details: assoc.details || undefined,
-          })),
+        clubAssociations: [], // Custom queries don't return nested associations
       }));
       
       setShops(prev => [...prev, ...newShops]);
       
-      // Only set nextToken if we actually got data
-      setShopNextToken(newShops.length > 0 ? (response.nextToken || null) : null);
+      // Custom queries don't support pagination yet
+      setShopNextToken(null);
     } catch (error) {
       console.error('Error loading more shops:', error);
     } finally {
@@ -438,15 +343,7 @@ export default function Shops() {
           email: shop.email || undefined,
           website: shop.website || undefined,
           services: shop.services?.filter((s): s is string => s !== null) || undefined,
-          clubAssociations: (shop.clubAssociations || [])
-            .filter(assoc => assoc.club)
-            .map(assoc => ({
-              id: assoc.id,
-              clubId: assoc.clubId,
-              clubName: assoc.club?.name || 'Unknown Club',
-              relationship: assoc.relationship,
-              details: assoc.details || undefined,
-            })),
+          clubAssociations: [], // Custom queries don't return nested associations
         }));
         
         setShops(transformedShops);

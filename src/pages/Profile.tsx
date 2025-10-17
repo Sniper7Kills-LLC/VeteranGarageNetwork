@@ -2,7 +2,6 @@ import { useAuthenticator } from '@aws-amplify/ui-react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { generateClient } from 'aws-amplify/data';
-import { fetchAuthSession } from 'aws-amplify/auth';
 import type { Schema } from '@/../amplify/data/resource';
 import ContentOnly from '@/components/layouts/ContentOnly';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -102,50 +101,35 @@ export default function Profile() {
       try {
         setIsLoadingClubs(true);
         setClubsError(null);
-        
-        const session = await fetchAuthSession();
-        const userId = session.tokens?.idToken?.payload.sub as string;
 
-        // Update debug info
-        setDebugInfo(prev => ({
-          ...prev,
-          userId: userId || 'No user ID found',
-          authStatus: authStatus || 'unknown'
-        }));
-
-        if (!userId) {
-          const errorMsg = 'No user ID (sub) found in session';
-          console.error(errorMsg);
-          setClubsError(errorMsg);
-          setIsLoadingClubs(false);
-          return;
-        }
-
-        // Fetch clubs owned by user
-        const { data: clubs, errors: clubErrors } = await client.models.Club.list({
-          filter: { owners: { contains: userId } },
-          authMode: 'userPool'
-        });
+        // Fetch clubs owned by user using custom resolver
+        const { data: clubs, errors: clubErrors } = await client.queries.listMyClubs(
+          {},
+          { authMode: 'userPool' }
+        );
 
         if (clubErrors && clubErrors.length > 0) {
           console.error('Errors fetching clubs:', clubErrors);
           setClubsError(`Error fetching clubs: ${clubErrors[0].message}`);
         }
 
-        // Transform clubs
-        const transformedClubs: OwnedClub[] = (clubs || []).map((club) => ({
-          id: club.id,
-          name: club.name,
-          description: club.description,
-          approved: club.approved || false,
-          type: club.type,
-        }));
+        // Transform clubs (filter out null items)
+        const transformedClubs: OwnedClub[] = (clubs || [])
+          .filter((club): club is NonNullable<typeof club> => club !== null)
+          .map((club) => ({
+            id: club.id,
+            name: club.name,
+            description: club.description,
+            approved: club.approved || false,
+            type: club.type,
+          }));
 
         setOwnedClubs(transformedClubs);
         
         // Update debug info with clubs count
         setDebugInfo(prev => ({
           ...prev,
+          authStatus: authStatus || 'authenticated',
           clubsCount: transformedClubs.length
         }));
       } catch (error) {
@@ -171,38 +155,29 @@ export default function Profile() {
       try {
         setIsLoadingChapters(true);
         setChaptersError(null);
-        
-        const session = await fetchAuthSession();
-        const userId = session.tokens?.idToken?.payload.sub as string;
 
-        if (!userId) {
-          const errorMsg = 'No user ID (sub) found in session';
-          console.error(errorMsg);
-          setChaptersError(errorMsg);
-          setIsLoadingChapters(false);
-          return;
-        }
-
-        // Fetch chapters owned by user
-        const { data: chapters, errors: chapterErrors } = await client.models.ClubChapter.list({
-          filter: { owners: { contains: userId } },
-          authMode: 'userPool'
-        });
+        // Fetch chapters owned by user using custom resolver
+        const { data: chapters, errors: chapterErrors } = await client.queries.listMyChapters(
+          {},
+          { authMode: 'userPool' }
+        );
 
         if (chapterErrors && chapterErrors.length > 0) {
           console.error('Errors fetching chapters:', chapterErrors);
           setChaptersError(`Error fetching chapters: ${chapterErrors[0].message}`);
         }
 
-        // Transform chapters
-        const transformedChapters: OwnedChapter[] = (chapters || []).map((chapter) => ({
-          id: chapter.id,
-          name: chapter.name,
-          description: chapter.description,
-          approved: chapter.approved || false,
-          city: chapter.city,
-          state: chapter.state,
-        }));
+        // Transform chapters (filter out null items)
+        const transformedChapters: OwnedChapter[] = (chapters || [])
+          .filter((chapter): chapter is NonNullable<typeof chapter> => chapter !== null)
+          .map((chapter) => ({
+            id: chapter.id,
+            name: chapter.name,
+            description: chapter.description,
+            approved: chapter.approved || false,
+            city: chapter.city,
+            state: chapter.state,
+          }));
 
         setOwnedChapters(transformedChapters);
         
@@ -234,51 +209,38 @@ export default function Profile() {
       try {
         setIsLoadingEvents(true);
         setEventsError(null);
-        
-        const session = await fetchAuthSession();
-        const userId = session.tokens?.idToken?.payload.sub as string;
 
-        if (!userId) {
-          const errorMsg = 'No user ID (sub) found in session';
-          console.error(errorMsg);
-          setEventsError(errorMsg);
-          setIsLoadingEvents(false);
-          return;
-        }
-
-        // Get current date in YYYY-MM-DD format for filtering
-        const today = new Date().toISOString().split('T')[0];
-
-        // Fetch events owned by user that are in the future
-        const { data: events, errors: eventErrors } = await client.models.Event.list({
-          filter: { 
-            and: [
-              { owners: { contains: userId } },
-              { date: { ge: today } }
-            ]
-          },
-          authMode: 'userPool'
-        });
+        // Fetch events owned by user using custom resolver
+        const { data: events, errors: eventErrors } = await client.queries.listMyEvents(
+          {},
+          { authMode: 'userPool' }
+        );
 
         if (eventErrors && eventErrors.length > 0) {
           console.error('Errors fetching events:', eventErrors);
           setEventsError(`Error fetching events: ${eventErrors[0].message}`);
         }
 
-        // Transform events to match the OwnedEvent interface
-        const transformedEvents: OwnedEvent[] = (events || []).map((event) => {
-          const locationParts = [event.city, event.state].filter(Boolean);
-          const location = locationParts.join(', ') || 'Location TBD';
-          
-          return {
-            id: event.id,
-            title: event.title,
-            date: event.date,
-            location,
-            category: event.category || 'Meetup',
-            approved: event.approved || false,
-          };
-        });
+        // Get current date for client-side filtering (future events only)
+        const today = new Date().toISOString().split('T')[0];
+
+        // Transform and filter events to match the OwnedEvent interface
+        const transformedEvents: OwnedEvent[] = (events || [])
+          .filter((event): event is NonNullable<typeof event> => event !== null)
+          .filter((event) => event.date >= today) // Client-side filter for future events
+          .map((event) => {
+            const locationParts = [event.city, event.state].filter(Boolean);
+            const location = locationParts.join(', ') || 'Location TBD';
+            
+            return {
+              id: event.id,
+              title: event.title,
+              date: event.date,
+              location,
+              category: event.category || 'Meetup',
+              approved: event.approved || false,
+            };
+          });
 
         setOwnedEvents(transformedEvents);
         
@@ -310,23 +272,12 @@ export default function Profile() {
       try {
         setIsLoadingShops(true);
         setShopsError(null);
-        
-        const session = await fetchAuthSession();
-        const userId = session.tokens?.idToken?.payload.sub as string;
 
-        if (!userId) {
-          const errorMsg = 'No user ID (sub) found in session';
-          console.error(errorMsg);
-          setShopsError(errorMsg);
-          setIsLoadingShops(false);
-          return;
-        }
-
-        // Fetch shops owned by user
-        const { data: shops, errors: shopErrors } = await client.models.Shop.list({
-          filter: { owners: { contains: userId } },
-          authMode: 'userPool'
-        });
+        // Fetch shops owned by user using custom resolver
+        const { data: shops, errors: shopErrors } = await client.queries.listMyShops(
+          {},
+          { authMode: 'userPool' }
+        );
 
         if (shopErrors && shopErrors.length > 0) {
           console.error('Errors fetching shops:', shopErrors);
@@ -334,19 +285,21 @@ export default function Profile() {
         }
 
         // Transform shops to match the OwnedShop interface
-        const transformedShops: OwnedShop[] = (shops || []).map((shop) => {
-          const locationParts = [shop.city, shop.state].filter(Boolean);
-          const location = locationParts.join(', ') || 'Location TBD';
-          
-          return {
-            id: shop.id,
-            name: shop.name,
-            description: shop.description,
-            location,
-            services: shop.services?.filter((s): s is string => s !== null) || [],
-            approved: shop.approved || false,
-          };
-        });
+        const transformedShops: OwnedShop[] = (shops || [])
+          .filter((shop): shop is NonNullable<typeof shop> => shop !== null)
+          .map((shop) => {
+            const locationParts = [shop.city, shop.state].filter(Boolean);
+            const location = locationParts.join(', ') || 'Location TBD';
+            
+            return {
+              id: shop.id,
+              name: shop.name,
+              description: shop.description,
+              location,
+              services: shop.services?.filter((s): s is string => s !== null) || [],
+              approved: shop.approved || false,
+            };
+          });
 
         setOwnedShops(transformedShops);
         

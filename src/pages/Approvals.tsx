@@ -91,12 +91,11 @@ export default function Approvals() {
   const fetchClubs = async () => {
     try {
       setLoadingClubs(true);
-      const { data } = await client.models.Club.list({
-        filter: { approved: { eq: false } },
+      const { data } = await client.queries.listUnapprovedClubs({
         authMode: 'userPool'
       });
       
-      setClubs(data.map(club => ({
+      setClubs((data || []).filter((club): club is NonNullable<typeof club> => club !== null).map(club => ({
         id: club.id,
         name: club.name,
         description: club.description,
@@ -115,12 +114,12 @@ export default function Approvals() {
   const fetchChapters = async () => {
     try {
       setLoadingChapters(true);
-      const { data } = await client.models.ClubChapter.list({
-        filter: { approved: { eq: false } },
-        authMode: 'userPool'
-      });
+      const { data } = await client.queries.listUnapprovedChapters(
+        {},
+        { authMode: 'userPool' }
+      );
       
-      setChapters(data.map(chapter => ({
+      setChapters((data || []).filter((chapter): chapter is NonNullable<typeof chapter> => chapter !== null).map(chapter => ({
         id: chapter.id,
         name: chapter.name,
         description: chapter.description,
@@ -141,12 +140,12 @@ export default function Approvals() {
   const fetchShops = async () => {
     try {
       setLoadingShops(true);
-      const { data } = await client.models.Shop.list({
-        filter: { approved: { eq: false } },
-        authMode: 'userPool'
-      });
+      const { data } = await client.queries.listUnapprovedShops(
+        {},
+        { authMode: 'userPool' }
+      );
       
-      setShops(data.map(shop => ({
+      setShops((data || []).filter((shop): shop is NonNullable<typeof shop> => shop !== null).map(shop => ({
         id: shop.id,
         name: shop.name,
         description: shop.description,
@@ -167,12 +166,12 @@ export default function Approvals() {
   const fetchEvents = async () => {
     try {
       setLoadingEvents(true);
-      const { data } = await client.models.Event.list({
-        filter: { approved: { eq: false } },
-        authMode: 'userPool'
-      });
+      const { data } = await client.queries.listUnapprovedEvents(
+        {},
+        { authMode: 'userPool' }
+      );
       
-      setEvents(data.map(event => ({
+      setEvents((data || []).filter((event): event is NonNullable<typeof event> => event !== null).map(event => ({
         id: event.id,
         title: event.title,
         description: event.description,

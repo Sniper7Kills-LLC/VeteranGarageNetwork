@@ -73,33 +73,9 @@ export default function EventFlyer() {
       try {
         setIsLoading(true);
         const client = generateClient<Schema>();
-        const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
 
-        const { data: eventData } = await client.models.Event.get(
-          { id },
-          {
-            selectionSet: [
-              'id',
-              'title',
-              'description',
-              'date',
-              'time',
-              'category',
-              'address',
-              'city',
-              'state',
-              'zipCode',
-              'latitude',
-              'longitude',
-              'route.*',
-              'images',
-              'chapterAssociations.relationship',
-              'chapterAssociations.chapter.name',
-              'chapterAssociations.chapter.club.name',
-            ],
-            authMode,
-          }
-        );
+        // Use getPublicEvent query to allow guest access to approved events
+        const { data: eventData } = await client.queries.getPublicEvent({ id });
 
         if (!eventData) {
           setError('Event not found');
@@ -128,18 +104,8 @@ export default function EventFlyer() {
           }));
         }
 
-        const chapterAssociations = eventData.chapterAssociations
-          ?.filter((assoc): assoc is NonNullable<typeof assoc> => assoc !== null)
-          .map(assoc => ({
-            relationship: assoc.relationship || '',
-            chapter: {
-              name: assoc.chapter?.name || '',
-              club: {
-                name: assoc.chapter?.club?.name || '',
-              },
-            },
-          }));
-
+        // Note: Custom queries don't return nested associations
+        // If chapter associations are needed, use listPublicEventAssociations query separately
         const transformedEvent: Event = {
           id: eventData.id,
           title: eventData.title,
@@ -153,7 +119,7 @@ export default function EventFlyer() {
           lng: eventData.longitude,
           route,
           routePoints,
-          chapterAssociations,
+          chapterAssociations: undefined, // Custom queries don't support nested data
         };
 
         setEvent(transformedEvent);
