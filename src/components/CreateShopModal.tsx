@@ -67,7 +67,7 @@ export default function CreateShopModal({
       // Create club associations
       const clubAssociationPromises = (formData.clubAssociations || []).map(async (association) => {
         try {
-          const { data, errors } = await client.models.ClubAssociation.create(
+          const { data, errors } = await client.models.ShopClubAssociation.create(
             {
               shopId: newShop.id,
               clubId: association.clubId,
@@ -91,7 +91,7 @@ export default function CreateShopModal({
       });
 
       const clubResults = await Promise.all(clubAssociationPromises);
-      const successfulClubAssociations = clubResults.filter((r) => r !== null).length;
+      const successfulClubAssociations = clubResults.filter((r: any) => r !== null).length;
 
       let description = 'Your shop is pending admin approval.';
       if (successfulClubAssociations > 0) {

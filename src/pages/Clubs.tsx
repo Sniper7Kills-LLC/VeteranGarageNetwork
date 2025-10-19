@@ -73,16 +73,16 @@ export default function Clubs() {
         const client = generateClient<Schema>();
         const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
         
-        const { data: clubsData } = await client.models.Club.list({
-          selectionSet: ['id', 'name', 'type', 'description', 'createdAt', 'updatedAt'],
-          authMode,
-          filter: { approved: { eq: true } }
-        });
+        const response = await client.queries.listApprovedClubs({
+          limit: 1000
+        }, { authMode });
         
-        setAllClubs(clubsData || []);
+        const items = response.data?.items || [];
+        setAllClubs(items as SimpleClub[]);
+        
         // Initialize all clubs as selected
-        if (clubsData && clubsData.length > 0) {
-          setSelectedClubIds(new Set(clubsData.map(club => club.id)));
+        if (items.length > 0) {
+          setSelectedClubIds(new Set(items.map((club: any) => club.id)));
         }
       } catch (error) {
         console.error('Error fetching all clubs:', error);
@@ -100,56 +100,19 @@ export default function Clubs() {
         const client = generateClient<Schema>();
         const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
         
-        // Build club filter
-        const clubFilter: Record<string, unknown> = { approved: { eq: true } };
+        // Use secure custom query with server-side filtering
+        const response = await client.queries.listApprovedClubsByType({
+          types: selectedClubTypes.size > 0 ? Array.from(selectedClubTypes) : undefined,
+          searchQuery: clubSearchQuery.trim() || undefined,
+          limit: 1000
+        }, { authMode });
         
-        const hasTypeFilter = selectedClubTypes.size > 0;
-        const hasSearchFilter = clubSearchQuery.trim();
-        
-        // Build type filter
-        let typeFilter: Record<string, unknown> | undefined;
-        if (hasTypeFilter) {
-          const typeArray = Array.from(selectedClubTypes);
-          if (typeArray.length === 1) {
-            typeFilter = { type: { eq: typeArray[0] } };
-          } else {
-            typeFilter = { or: typeArray.map(type => ({ type: { eq: type } })) };
-          }
-        }
-        
-        // Build search filter (name OR description)
-        let searchFilter: Record<string, unknown> | undefined;
-        if (hasSearchFilter) {
-          searchFilter = {
-            or: [
-              { name: { contains: clubSearchQuery.trim() } },
-              { description: { contains: clubSearchQuery.trim() } }
-            ]
-          };
-        }
-        
-        // Combine filters
-        if (typeFilter && searchFilter) {
-          clubFilter.and = [typeFilter, searchFilter];
-        } else if (typeFilter) {
-          Object.assign(clubFilter, typeFilter);
-        } else if (searchFilter) {
-          Object.assign(clubFilter, searchFilter);
-        }
-        
-        // Fetch clubs with filter and pagination
-        const response = await client.models.Club.list({
-          selectionSet: ['id', 'name', 'type', 'description', 'createdAt', 'updatedAt'],
-          authMode,
-          filter: clubFilter,
-          limit: 1000,
-        });
-        
-        setClubs(response.data || []);
-        setClubNextToken(response.nextToken || null);
+        const items = response.data?.items || [];
+        setClubs(items as SimpleClub[]);
+        setClubNextToken(response.data?.nextToken || null);
         
         // Update selected clubs: keep existing selections that are still valid, and auto-select new clubs
-        const filteredClubIds = new Set(response.data?.map(club => club.id) || []);
+        const filteredClubIds = new Set(items.map((club: any) => club.id));
         setSelectedClubIds(prev => {
           const updated = new Set<string>();
           
@@ -195,64 +158,26 @@ export default function Clubs() {
       const client = generateClient<Schema>();
       const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
       
-      // Build club filter
-      const clubFilter: Record<string, unknown> = { approved: { eq: true } };
-      
-      const hasTypeFilter = selectedClubTypes.size > 0;
-      const hasSearchFilter = clubSearchQuery.trim();
-      
-      // Build type filter
-      let typeFilter: Record<string, unknown> | undefined;
-      if (hasTypeFilter) {
-        const typeArray = Array.from(selectedClubTypes);
-        if (typeArray.length === 1) {
-          typeFilter = { type: { eq: typeArray[0] } };
-        } else {
-          typeFilter = { or: typeArray.map(type => ({ type: { eq: type } })) };
-        }
-      }
-      
-      // Build search filter (name OR description)
-      let searchFilter: Record<string, unknown> | undefined;
-      if (hasSearchFilter) {
-        searchFilter = {
-          or: [
-            { name: { contains: clubSearchQuery.trim() } },
-            { description: { contains: clubSearchQuery.trim() } }
-          ]
-        };
-      }
-      
-      // Combine filters
-      if (typeFilter && searchFilter) {
-        clubFilter.and = [typeFilter, searchFilter];
-      } else if (typeFilter) {
-        Object.assign(clubFilter, typeFilter);
-      } else if (searchFilter) {
-        Object.assign(clubFilter, searchFilter);
-      }
-      
-      // Fetch next page
-      const response = await client.models.Club.list({
-        selectionSet: ['id', 'name', 'type', 'description', 'createdAt', 'updatedAt'],
-        authMode,
-        filter: clubFilter,
+      // Use secure custom query with pagination
+      const response = await client.queries.listApprovedClubsByType({
+        types: selectedClubTypes.size > 0 ? Array.from(selectedClubTypes) : undefined,
+        searchQuery: clubSearchQuery.trim() || undefined,
         limit: 1000,
-        nextToken: clubNextToken,
-      });
+        nextToken: clubNextToken
+      }, { authMode });
       
       // Append new clubs to existing list
-      const newClubs = response.data || [];
-      setClubs(prev => [...prev, ...newClubs]);
+      const newClubs = response.data?.items || [];
+      setClubs(prev => [...prev, ...(newClubs as SimpleClub[])]);
       
       // Only set nextToken if we actually got data
-      setClubNextToken(newClubs.length > 0 ? (response.nextToken || null) : null);
+      setClubNextToken(newClubs.length > 0 ? (response.data?.nextToken || null) : null);
       
       // Auto-select new clubs
-      const newClubIds = newClubs.map(club => club.id);
+      const newClubIds = newClubs.map((club: any) => club.id);
       setSelectedClubIds(prev => {
         const updated = new Set(prev);
-        newClubIds.forEach(id => updated.add(id));
+        newClubIds.forEach((id: string) => updated.add(id));
         return updated;
       });
     } catch (error) {
@@ -270,56 +195,20 @@ export default function Clubs() {
         const client = generateClient<Schema>();
         const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
         
-        // Build chapter filter based on selected clubs and geographic bounds
-        const filters: Array<Record<string, unknown>> = [{ approved: { eq: true } }];
+        // Use secure custom query with server-side filtering and pipeline
+        const response = await client.queries.listApprovedChapters({
+          clubIds: Array.from(selectedClubIds),
+          minLat: mapBounds?.southWest.lat,
+          maxLat: mapBounds?.northEast.lat,
+          minLng: mapBounds?.southWest.lng,
+          maxLng: mapBounds?.northEast.lng,
+          limit: 1000
+        }, { authMode });
         
-        // Add club ID filter
-        if (selectedClubIds.size > 0) {
-          const clubIdArray = Array.from(selectedClubIds);
-          if (clubIdArray.length === 1) {
-            filters.push({ clubId: { eq: clubIdArray[0] } });
-          } else {
-            filters.push({ 
-              or: clubIdArray.map(clubId => ({ clubId: { eq: clubId } }))
-            });
-          }
-        }
-        
-        // Add geographic bounds filter if available
-        if (mapBounds) {
-          filters.push({
-            latitude: { 
-              between: [mapBounds.southWest.lat, mapBounds.northEast.lat]
-            }
-          });
-          filters.push({
-            longitude: { 
-              between: [mapBounds.southWest.lng, mapBounds.northEast.lng]
-            }
-          });
-        }
-        
-        // Combine all filters with AND logic
-        const chapterFilter = filters.length > 1 ? { and: filters } : filters[0];
-        
-        // Fetch chapters with filter and pagination
-        const response = await client.models.ClubChapter.list({
-          selectionSet: ['id', 'name', 'description', 'website', 'address', 'city', 'state', 'zipCode', 'latitude', 'longitude', 'clubId', 'club.*', 'roles.*'],
-          authMode,
-          filter: chapterFilter,
-          limit: 1000,
-        });
-        
-        setChapters(response.data || []);
-        setChapterNextToken(response.nextToken || null);
-        
-        // Fetch total count (without pagination)
-        const countResponse = await client.models.ClubChapter.list({
-          selectionSet: ['id'],
-          authMode,
-          filter: chapterFilter,
-        });
-        setTotalChapters(countResponse.data?.length || 0);
+        const items = response.data?.items || [];
+        setChapters(items as any);
+        setChapterNextToken(response.data?.nextToken || null);
+        setTotalChapters(response.data?.scannedCount || 0);
       } catch (error) {
         console.error('Error fetching chapters:', error);
         setChapters([]);
@@ -350,53 +239,23 @@ export default function Clubs() {
       const client = generateClient<Schema>();
       const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
       
-      // Build chapter filter based on selected clubs and geographic bounds
-      const filters: Array<Record<string, unknown>> = [{ approved: { eq: true } }];
-      
-      // Add club ID filter
-      if (selectedClubIds.size > 0) {
-        const clubIdArray = Array.from(selectedClubIds);
-        if (clubIdArray.length === 1) {
-          filters.push({ clubId: { eq: clubIdArray[0] } });
-        } else {
-          filters.push({ 
-            or: clubIdArray.map(clubId => ({ clubId: { eq: clubId } }))
-          });
-        }
-      }
-      
-      // Add geographic bounds filter if available
-      if (mapBounds) {
-        filters.push({
-          latitude: { 
-            between: [mapBounds.southWest.lat, mapBounds.northEast.lat]
-          }
-        });
-        filters.push({
-          longitude: { 
-            between: [mapBounds.southWest.lng, mapBounds.northEast.lng]
-          }
-        });
-      }
-      
-      // Combine all filters with AND logic
-      const chapterFilter = filters.length > 1 ? { and: filters } : filters[0];
-      
-      // Fetch next page
-      const response = await client.models.ClubChapter.list({
-        selectionSet: ['id', 'name', 'description', 'website', 'address', 'city', 'state', 'zipCode', 'latitude', 'longitude', 'clubId', 'club.*', 'roles.*'],
-        authMode,
-        filter: chapterFilter,
+      // Use secure custom query with pagination
+      const response = await client.queries.listApprovedChapters({
+        clubIds: Array.from(selectedClubIds),
+        minLat: mapBounds?.southWest.lat,
+        maxLat: mapBounds?.northEast.lat,
+        minLng: mapBounds?.southWest.lng,
+        maxLng: mapBounds?.northEast.lng,
         limit: 1000,
-        nextToken: chapterNextToken,
-      });
+        nextToken: chapterNextToken
+      }, { authMode });
       
       // Append new chapters to existing list
-      const newChapters = response.data || [];
-      setChapters(prev => [...prev, ...newChapters]);
+      const newChapters = response.data?.items || [];
+      setChapters(prev => [...prev, ...(newChapters as any)]);
       
       // Only set nextToken if we actually got data
-      setChapterNextToken(newChapters.length > 0 ? (response.nextToken || null) : null);
+      setChapterNextToken(newChapters.length > 0 ? (response.data?.nextToken || null) : null);
     } catch (error) {
       console.error('Error loading more chapters:', error);
     } finally {
@@ -489,19 +348,18 @@ export default function Clubs() {
         const client = generateClient<Schema>();
         const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
         
-        const { data: clubsData } = await client.models.Club.list({
-          selectionSet: ['id', 'name', 'type', 'description', 'createdAt', 'updatedAt'],
-          authMode,
-          filter: { approved: { eq: true } }
-        });
+        const response = await client.queries.listApprovedClubs({
+          limit: 1000
+        }, { authMode });
         
-        setAllClubs(clubsData || []);
+        const items = response.data?.items || [];
+        setAllClubs(items as SimpleClub[]);
         
         // Update selected clubs to include new clubs
-        if (clubsData && clubsData.length > 0) {
+        if (items.length > 0) {
           setSelectedClubIds(prev => {
             const updated = new Set(prev);
-            clubsData.forEach(club => updated.add(club.id));
+            items.forEach((club: any) => updated.add(club.id));
             return updated;
           });
         }

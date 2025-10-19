@@ -21,6 +21,19 @@ const schema = a.schema({
     order: a.integer().required(),
   }),
 
+  // Connection types for pagination support
+  ClubConnection: a.customType({
+    items: a.ref('Club').array().required(),
+    nextToken: a.string(),
+    scannedCount: a.integer(),
+  }),
+
+  ChapterConnection: a.customType({
+    items: a.ref('ClubChapter').array().required(),
+    nextToken: a.string(),
+    scannedCount: a.integer(),
+  }),
+
   // ============================================================================
   // CLUBS & CHAPTERS
   // ============================================================================
@@ -58,7 +71,7 @@ const schema = a.schema({
       
       // Relationships
       chapters: a.hasMany('ClubChapter', 'clubId'),
-      shopAssociations: a.hasMany('ClubAssociation', 'clubId'),
+      shopAssociations: a.hasMany('ShopClubAssociation', 'clubId'),
     })
     .authorization((allow) => [
       allow.guest().to(['read']),
@@ -109,7 +122,7 @@ const schema = a.schema({
       clubId: a.id().required(),
       club: a.belongsTo('Club', 'clubId'),
       roles: a.hasMany('ChapterRole', 'chapterId'),
-      chapterAssociations: a.hasMany('ChapterAssociation', 'chapterId'),
+      shopAssociations: a.hasMany('ShopChapterAssociation', 'chapterId'),
       eventAssociations: a.hasMany('EventChapterAssociation', 'chapterId'),
     })
     .authorization((allow) => [
@@ -206,8 +219,8 @@ const schema = a.schema({
       ]),
       
       // Relationships
-      clubAssociations: a.hasMany('ClubAssociation', 'shopId'),
-      chapterAssociations: a.hasMany('ChapterAssociation', 'shopId'),
+      clubAssociations: a.hasMany('ShopClubAssociation', 'shopId'),
+      chapterAssociations: a.hasMany('ShopChapterAssociation', 'shopId'),
     })
     .authorization((allow) => [
       allow.guest().to(['read']),
@@ -216,7 +229,7 @@ const schema = a.schema({
       allow.groups(['admin']).to(['read', 'update', 'delete']),
     ]),
 
-  ClubAssociation: a
+  ShopClubAssociation: a
     .model({
       // Basic Fields
       id: a.id().required(),
@@ -250,7 +263,7 @@ const schema = a.schema({
       allow.groups(['admin']).to(['read', 'update', 'delete']),
     ]),
 
-  ChapterAssociation: a
+  ShopChapterAssociation: a
     .model({
       // Basic Fields
       id: a.id().required(),
@@ -385,6 +398,66 @@ const schema = a.schema({
   // ============================================================================
   // QUERIES
   // ============================================================================
+
+  // Club Queries - Secure server-side filtering
+  listApprovedClubs: a
+    .query()
+    .arguments({
+      limit: a.integer(),
+      nextToken: a.string(),
+    })
+    .returns(a.ref('ClubConnection'))
+    .handler(
+      a.handler.custom({
+        dataSource: a.ref('Club'),
+        entry: './resolvers/clubs/List.ts',
+      })
+    )
+    .authorization((allow) => [allow.guest(), allow.authenticated()]),
+
+  listApprovedClubsByType: a
+    .query()
+    .arguments({
+      types: a.string().array(),
+      searchQuery: a.string(),
+      limit: a.integer(),
+      nextToken: a.string(),
+    })
+    .returns(a.ref('ClubConnection'))
+    .handler(
+      a.handler.custom({
+        dataSource: a.ref('Club'),
+        entry: './resolvers/clubs/ListByType.ts',
+      })
+    )
+    .authorization((allow) => [allow.guest(), allow.authenticated()]),
+
+  // Chapter Queries - Secure server-side filtering with pipeline
+  listApprovedChapters: a
+    .query()
+    .arguments({
+      clubIds: a.string().array(),
+      minLat: a.float(),
+      maxLat: a.float(),
+      minLng: a.float(),
+      maxLng: a.float(),
+      limit: a.integer(),
+      nextToken: a.string(),
+    })
+    .returns(a.ref('ChapterConnection'))
+    .handler([
+      // Step 1: Fetch chapters (approved, with bounds and club filters)
+      a.handler.custom({
+        dataSource: a.ref('ClubChapter'),
+        entry: './resolvers/chapters/List.ts',
+      }),
+      // Step 2: Fetch roles for chapters
+      a.handler.custom({
+        dataSource: a.ref('ChapterRole'),
+        entry: './resolvers/shared/FetchChapterRoles.ts',
+      }),
+    ])
+    .authorization((allow) => [allow.guest(), allow.authenticated()]),
 
   getStats: a
     .query()

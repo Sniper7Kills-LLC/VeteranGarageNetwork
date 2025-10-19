@@ -92,7 +92,7 @@ export default function ShopModal({
       const deleteResults = await Promise.all(
         shop.clubAssociations.map(async (assoc) => {
           try {
-            const result = await client.models.ClubAssociation.delete(
+            const result = await client.models.ShopClubAssociation.delete(
               { id: assoc.id }, 
               { authMode: 'userPool' }
             );
@@ -124,7 +124,7 @@ export default function ShopModal({
       // Create new club associations
       const clubAssociationPromises = (formData.clubAssociations || []).map(async (association) => {
         try {
-          const { data, errors } = await client.models.ClubAssociation.create(
+          const { data, errors } = await client.models.ShopClubAssociation.create(
             {
               shopId: shop.id,
               clubId: association.clubId,
