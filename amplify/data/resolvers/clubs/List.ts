@@ -11,7 +11,13 @@ export function request(ctx: any) {
   return {
     operation: 'Scan',
     filter: {
-      approved: { eq: true }
+      expression: '#approved = :approved',
+      expressionNames: {
+        '#approved': 'approved'
+      },
+      expressionValues: {
+        ':approved': { BOOL: true }
+      }
     },
     limit: limit || 1000,
     nextToken: nextToken || undefined

@@ -18,39 +18,49 @@
 export function request(ctx: any) {
   const { clubIds, minLat, maxLat, minLng, maxLng, limit, nextToken } = ctx.args;
   
-  // Start with approved filter
-  const filters: any[] = [{ approved: { eq: true } }];
+  // Build filter expression parts
+  const expressions: string[] = ['#approved = :approved'];
+  const expressionNames: Record<string, string> = { '#approved': 'approved' };
+  const expressionValues: Record<string, any> = { ':approved': { BOOL: true } };
   
   // Add club ID filter (required)
   if (clubIds && clubIds.length > 0) {
     if (clubIds.length === 1) {
-      filters.push({ clubId: { eq: clubIds[0] } });
+      expressions.push('#clubId = :clubId0');
+      expressionNames['#clubId'] = 'clubId';
+      expressionValues[':clubId0'] = { S: clubIds[0] };
     } else {
-      filters.push({
-        or: clubIds.map((clubId: string) => ({ clubId: { eq: clubId } }))
+      const clubIdExpressions = clubIds.map((clubId: string, index: number) => {
+        expressionValues[`:clubId${index}`] = { S: clubId };
+        return `#clubId = :clubId${index}`;
       });
+      expressions.push(`(${clubIdExpressions.join(' OR ')})`);
+      expressionNames['#clubId'] = 'clubId';
     }
   }
   
   // Add geographic bounds filters if provided
   if (minLat !== undefined && maxLat !== undefined) {
-    filters.push({
-      latitude: { between: [minLat, maxLat] }
-    });
+    expressions.push('#latitude BETWEEN :minLat AND :maxLat');
+    expressionNames['#latitude'] = 'latitude';
+    expressionValues[':minLat'] = { N: minLat.toString() };
+    expressionValues[':maxLat'] = { N: maxLat.toString() };
   }
   
   if (minLng !== undefined && maxLng !== undefined) {
-    filters.push({
-      longitude: { between: [minLng, maxLng] }
-    });
+    expressions.push('#longitude BETWEEN :minLng AND :maxLng');
+    expressionNames['#longitude'] = 'longitude';
+    expressionValues[':minLng'] = { N: minLng.toString() };
+    expressionValues[':maxLng'] = { N: maxLng.toString() };
   }
-  
-  // Combine all filters with AND logic
-  const filter = filters.length > 1 ? { and: filters } : filters[0];
   
   return {
     operation: 'Scan',
-    filter,
+    filter: {
+      expression: expressions.join(' AND '),
+      expressionNames,
+      expressionValues
+    },
     limit: limit || 1000,
     nextToken: nextToken || undefined
   };

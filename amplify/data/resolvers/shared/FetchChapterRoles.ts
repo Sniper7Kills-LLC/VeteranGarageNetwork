@@ -10,10 +10,7 @@
  */
 
 export function request(ctx: any) {
-  const previousResult = ctx.prev.result;
-  
-  // Handle both array and connection type inputs
-  const chapters = previousResult.items || previousResult;
+  const chapters = ctx.prev.result;
   
   if (!chapters || chapters.length === 0) {
     return { operation: 'Scan', limit: 0 };
@@ -22,15 +19,35 @@ export function request(ctx: any) {
   // Get unique chapter IDs
   const chapterIds = chapters.map((chapter: any) => chapter.id);
   
-  // Build filter to fetch roles for these chapters
-  const filter = chapterIds.length === 1
-    ? { chapterId: { eq: chapterIds[0] } }
-    : { or: chapterIds.map((id: any) => ({ chapterId: { eq: id } })) };
+  // Build filter expression
+  const expressionNames: Record<string, string> = { '#chapterId': 'chapterId' };
+  const expressionValues: Record<string, any> = {};
   
-  return {
-    operation: 'Scan',
-    filter
-  };
+  if (chapterIds.length === 1) {
+    expressionValues[':chapterId0'] = { S: chapterIds[0] };
+    return {
+      operation: 'Scan',
+      filter: {
+        expression: '#chapterId = :chapterId0',
+        expressionNames,
+        expressionValues
+      }
+    };
+  } else {
+    const expressions = chapterIds.map((id: any, index: number) => {
+      expressionValues[`:chapterId${index}`] = { S: id };
+      return `#chapterId = :chapterId${index}`;
+    });
+    
+    return {
+      operation: 'Scan',
+      filter: {
+        expression: `(${expressions.join(' OR ')})`,
+        expressionNames,
+        expressionValues
+      }
+    };
+  }
 }
 
 export function response(ctx: any) {
