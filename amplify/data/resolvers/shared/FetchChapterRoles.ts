@@ -34,27 +34,12 @@ export function request(ctx: any) {
 }
 
 export function response(ctx: any) {
-  const previousResult = ctx.prev.result;
+  const chapters = ctx.prev.result;
   const roles = ctx.result.items || [];
   
-  // Handle both array and connection type inputs
-  const chapters = previousResult.items || previousResult;
-  
-  // Merge roles into chapters
-  const chaptersWithRoles = chapters.map((chapter: any) => ({
+  // Merge roles into chapters and return array
+  return chapters.map((chapter: any) => ({
     ...chapter,
     roles: roles.filter((role: any) => role.chapterId === chapter.id)
   }));
-  
-  // If previous result was a connection type, preserve pagination metadata
-  if (previousResult.items) {
-    return {
-      items: chaptersWithRoles,
-      nextToken: previousResult.nextToken || null,
-      scannedCount: previousResult.scannedCount || 0
-    };
-  }
-  
-  // Otherwise return just the array
-  return chaptersWithRoles;
 }

@@ -77,7 +77,7 @@ export default function Clubs() {
           limit: 1000
         }, { authMode });
         
-        const items = response.data?.items || [];
+        const items = response.data || [];
         setAllClubs(items as SimpleClub[]);
         
         // Initialize all clubs as selected
@@ -107,9 +107,9 @@ export default function Clubs() {
           limit: 1000
         }, { authMode });
         
-        const items = response.data?.items || [];
+        const items = response.data || [];
         setClubs(items as SimpleClub[]);
-        setClubNextToken(response.data?.nextToken || null);
+        setClubNextToken(null); // Pagination not supported with array return
         
         // Update selected clubs: keep existing selections that are still valid, and auto-select new clubs
         const filteredClubIds = new Set(items.map((club: any) => club.id));
@@ -167,11 +167,11 @@ export default function Clubs() {
       }, { authMode });
       
       // Append new clubs to existing list
-      const newClubs = response.data?.items || [];
+      const newClubs = response.data || [];
       setClubs(prev => [...prev, ...(newClubs as SimpleClub[])]);
       
-      // Only set nextToken if we actually got data
-      setClubNextToken(newClubs.length > 0 ? (response.data?.nextToken || null) : null);
+      // Pagination not supported with array return
+      setClubNextToken(null);
       
       // Auto-select new clubs
       const newClubIds = newClubs.map((club: any) => club.id);
@@ -205,10 +205,10 @@ export default function Clubs() {
           limit: 1000
         }, { authMode });
         
-        const items = response.data?.items || [];
+        const items = response.data || [];
         setChapters(items as any);
-        setChapterNextToken(response.data?.nextToken || null);
-        setTotalChapters(response.data?.scannedCount || 0);
+        setChapterNextToken(null); // Pagination not supported with array return
+        setTotalChapters(items.length);
       } catch (error) {
         console.error('Error fetching chapters:', error);
         setChapters([]);
@@ -251,11 +251,11 @@ export default function Clubs() {
       }, { authMode });
       
       // Append new chapters to existing list
-      const newChapters = response.data?.items || [];
+      const newChapters = response.data || [];
       setChapters(prev => [...prev, ...(newChapters as any)]);
       
-      // Only set nextToken if we actually got data
-      setChapterNextToken(newChapters.length > 0 ? (response.data?.nextToken || null) : null);
+      // Pagination not supported with array return
+      setChapterNextToken(null);
     } catch (error) {
       console.error('Error loading more chapters:', error);
     } finally {
@@ -352,7 +352,7 @@ export default function Clubs() {
           limit: 1000
         }, { authMode });
         
-        const items = response.data?.items || [];
+        const items = response.data || [];
         setAllClubs(items as SimpleClub[]);
         
         // Update selected clubs to include new clubs

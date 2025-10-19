@@ -57,11 +57,6 @@ export function request(ctx: any) {
 }
 
 export function response(ctx: any) {
-  // Return connection type with pagination metadata
-  // This will be passed to the next pipeline step (FetchChapterRoles)
-  return {
-    items: ctx.result.items || [],
-    nextToken: ctx.result.nextToken || null,
-    scannedCount: ctx.result.scannedCount || 0
-  };
+  // Return items array - will be passed to the next pipeline step (FetchChapterRoles)
+  return ctx.result.items || [];
 }

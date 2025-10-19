@@ -21,18 +21,6 @@ const schema = a.schema({
     order: a.integer().required(),
   }),
 
-  // Connection types for pagination support
-  ClubConnection: a.customType({
-    items: a.ref('Club').array().required(),
-    nextToken: a.string(),
-    scannedCount: a.integer(),
-  }),
-
-  ChapterConnection: a.customType({
-    items: a.ref('ClubChapter').array().required(),
-    nextToken: a.string(),
-    scannedCount: a.integer(),
-  }),
 
   // ============================================================================
   // CLUBS & CHAPTERS
@@ -406,7 +394,7 @@ const schema = a.schema({
       limit: a.integer(),
       nextToken: a.string(),
     })
-    .returns(a.ref('ClubConnection'))
+    .returns(a.ref('Club').array())
     .handler(
       a.handler.custom({
         dataSource: a.ref('Club'),
@@ -423,7 +411,7 @@ const schema = a.schema({
       limit: a.integer(),
       nextToken: a.string(),
     })
-    .returns(a.ref('ClubConnection'))
+    .returns(a.ref('Club').array())
     .handler(
       a.handler.custom({
         dataSource: a.ref('Club'),
@@ -444,7 +432,7 @@ const schema = a.schema({
       limit: a.integer(),
       nextToken: a.string(),
     })
-    .returns(a.ref('ChapterConnection'))
+    .returns(a.ref('ClubChapter').array())
     .handler([
       // Step 1: Fetch chapters (approved, with bounds and club filters)
       a.handler.custom({

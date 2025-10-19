@@ -19,9 +19,5 @@ export function request(ctx: any) {
 }
 
 export function response(ctx: any) {
-  return {
-    items: ctx.result.items || [],
-    nextToken: ctx.result.nextToken || null,
-    scannedCount: ctx.result.scannedCount || 0
-  };
+  return ctx.result.items || [];
 }
