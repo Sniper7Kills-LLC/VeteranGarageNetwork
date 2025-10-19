@@ -398,7 +398,7 @@ const schema = a.schema({
     .handler(
       a.handler.custom({
         dataSource: a.ref('Club'),
-        entry: './resolvers/clubs/List.ts',
+        entry: './resolvers/clubs/List.js',
       })
     )
     .authorization((allow) => [allow.publicApiKey(), allow.authenticated()]),
@@ -415,7 +415,7 @@ const schema = a.schema({
     .handler(
       a.handler.custom({
         dataSource: a.ref('Club'),
-        entry: './resolvers/clubs/ListByType.ts',
+        entry: './resolvers/clubs/ListByType.js',
       })
     )
     .authorization((allow) => [allow.publicApiKey(), allow.authenticated()]),
@@ -437,12 +437,12 @@ const schema = a.schema({
       // Step 1: Fetch chapters (approved, with bounds and club filters)
       a.handler.custom({
         dataSource: a.ref('ClubChapter'),
-        entry: './resolvers/chapters/List.ts',
+        entry: './resolvers/chapters/List.js',
       }),
       // Step 2: Fetch roles for chapters
       a.handler.custom({
         dataSource: a.ref('ChapterRole'),
-        entry: './resolvers/shared/FetchChapterRoles.ts',
+        entry: './resolvers/shared/FetchChapterRoles.js',
       }),
     ])
     .authorization((allow) => [allow.publicApiKey(), allow.authenticated()]),

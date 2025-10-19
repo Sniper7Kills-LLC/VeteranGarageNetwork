@@ -11,17 +11,17 @@
  *   - limit: Pagination limit (optional, default 1000)
  *   - nextToken: Pagination token (optional)
  * 
- * Returns: ChapterConnection with pagination support
+ * Returns: Array of approved chapters
  * Note: This is the first step in a pipeline. Next step will fetch roles.
  */
 
-export function request(ctx: any) {
+export function request(ctx) {
   const { clubIds, minLat, maxLat, minLng, maxLng, limit, nextToken } = ctx.args;
   
   // Build filter expression parts
-  const expressions: string[] = ['#approved = :approved'];
-  const expressionNames: Record<string, string> = { '#approved': 'approved' };
-  const expressionValues: Record<string, any> = { ':approved': { BOOL: true } };
+  const expressions = ['#approved = :approved'];
+  const expressionNames = { '#approved': 'approved' };
+  const expressionValues = { ':approved': { BOOL: true } };
   
   // Add club ID filter (required)
   if (clubIds && clubIds.length > 0) {
@@ -30,7 +30,7 @@ export function request(ctx: any) {
       expressionNames['#clubId'] = 'clubId';
       expressionValues[':clubId0'] = { S: clubIds[0] };
     } else {
-      const clubIdExpressions = clubIds.map((clubId: string, index: number) => {
+      const clubIdExpressions = clubIds.map((clubId, index) => {
         expressionValues[`:clubId${index}`] = { S: clubId };
         return `#clubId = :clubId${index}`;
       });
@@ -62,11 +62,11 @@ export function request(ctx: any) {
       expressionValues
     },
     limit: limit || 1000,
-    nextToken: nextToken || undefined
+    nextToken: nextToken
   };
 }
 
-export function response(ctx: any) {
+export function response(ctx) {
   // Return items array - will be passed to the next pipeline step (FetchChapterRoles)
   return ctx.result.items || [];
 }

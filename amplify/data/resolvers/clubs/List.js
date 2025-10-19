@@ -2,10 +2,10 @@
  * List all approved clubs
  * Public access (guest + authenticated)
  * 
- * Returns: ClubConnection with pagination support
+ * Returns: Array of approved clubs
  */
 
-export function request(ctx: any) {
+export function request(ctx) {
   const { limit, nextToken } = ctx.args;
   
   return {
@@ -20,10 +20,10 @@ export function request(ctx: any) {
       }
     },
     limit: limit || 1000,
-    nextToken: nextToken || undefined
+    nextToken: nextToken
   };
 }
 
-export function response(ctx: any) {
+export function response(ctx) {
   return ctx.result.items || [];
 }

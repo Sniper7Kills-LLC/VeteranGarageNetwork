@@ -1,15 +1,12 @@
 /**
  * Shared Resolver: Fetch roles for chapters
  * 
- * Input: ctx.prev.result should contain:
- *   - items: Array of chapters with 'id' field
- *   - nextToken: (optional) pagination token to preserve
- *   - scannedCount: (optional) count to preserve
+ * Input: ctx.prev.result should contain array of chapters with 'id' field
  * 
  * Output: Chapters with nested roles array
  */
 
-export function request(ctx: any) {
+export function request(ctx) {
   const chapters = ctx.prev.result;
   
   if (!chapters || chapters.length === 0) {
@@ -17,11 +14,11 @@ export function request(ctx: any) {
   }
   
   // Get unique chapter IDs
-  const chapterIds = chapters.map((chapter: any) => chapter.id);
+  const chapterIds = chapters.map((chapter) => chapter.id);
   
   // Build filter expression
-  const expressionNames: Record<string, string> = { '#chapterId': 'chapterId' };
-  const expressionValues: Record<string, any> = {};
+  const expressionNames = { '#chapterId': 'chapterId' };
+  const expressionValues = {};
   
   if (chapterIds.length === 1) {
     expressionValues[':chapterId0'] = { S: chapterIds[0] };
@@ -34,7 +31,7 @@ export function request(ctx: any) {
       }
     };
   } else {
-    const expressions = chapterIds.map((id: any, index: number) => {
+    const expressions = chapterIds.map((id, index) => {
       expressionValues[`:chapterId${index}`] = { S: id };
       return `#chapterId = :chapterId${index}`;
     });
@@ -50,13 +47,13 @@ export function request(ctx: any) {
   }
 }
 
-export function response(ctx: any) {
+export function response(ctx) {
   const chapters = ctx.prev.result;
   const roles = ctx.result.items || [];
   
   // Merge roles into chapters and return array
-  return chapters.map((chapter: any) => ({
+  return chapters.map((chapter) => ({
     ...chapter,
-    roles: roles.filter((role: any) => role.chapterId === chapter.id)
+    roles: roles.filter((role) => role.chapterId === chapter.id)
   }));
 }
