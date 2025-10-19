@@ -71,7 +71,7 @@ export default function Clubs() {
     const fetchAllClubs = async () => {
       try {
         const client = generateClient<Schema>();
-        const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
+        const authMode = authStatus === 'authenticated' ? 'userPool' : 'apiKey';
         
         const response = await client.queries.listApprovedClubs({
           limit: 1000
@@ -98,7 +98,7 @@ export default function Clubs() {
     const fetchFilteredClubs = async () => {
       try {
         const client = generateClient<Schema>();
-        const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
+        const authMode = authStatus === 'authenticated' ? 'userPool' : 'apiKey';
         
         // Use secure custom query with server-side filtering
         const response = await client.queries.listApprovedClubsByType({
@@ -156,7 +156,7 @@ export default function Clubs() {
     try {
       setIsLoadingMoreClubs(true);
       const client = generateClient<Schema>();
-      const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
+      const authMode = authStatus === 'authenticated' ? 'userPool' : 'apiKey';
       
       // Use secure custom query with pagination
       const response = await client.queries.listApprovedClubsByType({
@@ -193,7 +193,7 @@ export default function Clubs() {
       try {
         setIsLoading(true);
         const client = generateClient<Schema>();
-        const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
+        const authMode = authStatus === 'authenticated' ? 'userPool' : 'apiKey';
         
         // Use secure custom query with server-side filtering and pipeline
         const response = await client.queries.listApprovedChapters({
@@ -237,7 +237,7 @@ export default function Clubs() {
     try {
       setIsLoadingMoreChapters(true);
       const client = generateClient<Schema>();
-      const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
+      const authMode = authStatus === 'authenticated' ? 'userPool' : 'apiKey';
       
       // Use secure custom query with pagination
       const response = await client.queries.listApprovedChapters({
@@ -346,7 +346,7 @@ export default function Clubs() {
     const refetchClubs = async () => {
       try {
         const client = generateClient<Schema>();
-        const authMode = authStatus === 'authenticated' ? 'userPool' : 'identityPool';
+        const authMode = authStatus === 'authenticated' ? 'userPool' : 'apiKey';
         
         const response = await client.queries.listApprovedClubs({
           limit: 1000

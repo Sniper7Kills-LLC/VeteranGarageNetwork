@@ -413,7 +413,7 @@ const schema = a.schema({
         entry: './resolvers/clubs/List.ts',
       })
     )
-    .authorization((allow) => [allow.guest(), allow.authenticated()]),
+    .authorization((allow) => [allow.publicApiKey(), allow.authenticated()]),
 
   listApprovedClubsByType: a
     .query()
@@ -430,7 +430,7 @@ const schema = a.schema({
         entry: './resolvers/clubs/ListByType.ts',
       })
     )
-    .authorization((allow) => [allow.guest(), allow.authenticated()]),
+    .authorization((allow) => [allow.publicApiKey(), allow.authenticated()]),
 
   // Chapter Queries - Secure server-side filtering with pipeline
   listApprovedChapters: a
@@ -457,7 +457,7 @@ const schema = a.schema({
         entry: './resolvers/shared/FetchChapterRoles.ts',
       }),
     ])
-    .authorization((allow) => [allow.guest(), allow.authenticated()]),
+    .authorization((allow) => [allow.publicApiKey(), allow.authenticated()]),
 
   getStats: a
     .query()
